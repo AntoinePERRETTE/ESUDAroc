@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <stdint.h>
 
 /* BACnet Stack includes */
 #include "bacnet/apdu.h"
@@ -19,7 +18,6 @@
 #include "bacnet/basic/object/ao.h"
 #include "bacnet/basic/object/ai.h"
 #include "bacnet/basic/object/bo.h"
-#include "bacnet/basic/object/bv.h"
 #include "bacnet/basic/object/device.h"
 
 #include "bacnet/basic/object/schedule.h"
@@ -91,28 +89,6 @@ static object_functions_t My_Object_Table[] = {
         Schedule_Read_Property,
         Schedule_Write_Property,
         Schedule_Property_Lists,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL },
-
-    /* Trend Log Object */
-    { OBJECT_TRENDLOG,
-        Trend_Log_Init,
-        Trend_Log_Count,
-        Trend_Log_Index_To_Instance,
-        Trend_Log_Valid_Instance,
-        Trend_Log_Object_Name,
-        Trend_Log_Read_Property,
-        Trend_Log_Write_Property,
-        Trend_Log_Property_Lists,
         NULL,
         NULL,
         NULL,
@@ -215,9 +191,9 @@ static object_functions_t My_Object_Table[] = {
 
 
 /**
- * @brief Initializes the BACnet objects (AV-0, AO-0, BO-0, BV-0).
+ * @brief Initializes the BACnet objects (AV-0, AO-0, BO-0, Schedule).
  */
-static void Init_Service_Handlers(void) {
+static void initServiceHandlers(void) {
     Device_Init(My_Object_Table);
 
     BACNET_DATE start_date = { 1900, 1, 1, 1 };
@@ -252,7 +228,7 @@ static void Init_Service_Handlers(void) {
     apdu_set_unrecognized_service_handler_handler(handler_unrecognized_service);
 }
 
-void initBacnetStack() {
+static void initBacnetStack() {
     const char *device_name = "ESUDAroc - Device"; /* Default device name */
     uint32_t device_instance = 123456; /* Default device instance ID */
 
@@ -263,7 +239,7 @@ void initBacnetStack() {
 
     /* Initialize BACnet stack */
     dlenv_init();
-    Init_Service_Handlers();
+    initServiceHandlers();
     atexit(datalink_cleanup);
 
     Device_Object_Name_ANSI_Init(device_name);
@@ -274,11 +250,63 @@ void initBacnetStack() {
 }
 
 /**
+ * @brief send data of an object through Output FIFO
+ */
+static void sendObjectDataToFifo(enum BACnetObjectType __objectType,
+                                uint32_t __objectInstance,
+                                uint8_t __objectTag,
+                                int __fifoFd) {
+    struct sendableFloat {
+        uint32_t mantissa;
+        uint32_t exponent;
+    };
+
+    struct sendablePresentValue {
+        enum {binary = 1, analog} type;
+        union {
+            uint8_t binary;
+            struct sendableFloat analog;
+        } data;
+    };
+
+    struct dataPacket {
+        enum BACnetObjectType typeOfObject;
+        uint32_t instanceOfObject;
+        uint8_t tagOfObject;
+
+        struct sendablePresentValue value;
+    } dataToSend;
+
+    dataToSend.typeOfObject = __objectType;
+    dataToSend.instanceOfObject = __objectInstance;
+    /* TODO check for TREND_LOG */
+    switch (__objectType) {
+        case OBJECT_SCHEDULE:
+            dataToSend.tagOfObject = Schedule_Object(__objectInstance)->Present_Value.tag;
+            if (dataToSend.tagOfObject == BACNET_APPLICATION_TAG_REAL) {
+                dataToSend.value.type = analog;
+                /* get analog value */
+            } else if (dataToSend.tagOfObject == BACNET_APPLICATION_TAG_ENUMERATED) {
+                dataToSend.value.type = binary;
+                dataToSend.value.data.binary = Schedule_Object(__objectInstance)->Present_Value.type.Enumerated;
+            }
+            break;
+        case OBJECT_ANALOG_VALUE:
+            dataToSend.tagOfObject = BACNET_APPLICATION_TAG_REAL;
+            break;
+        default:
+            break;
+    }
+}
+
+/**
  * @brief Output the present value if possible (FIFO openned from both side)
  * Update present value from value received by FIFO
  */
-static void process(int inputFd, int outputFd) {
-    /* envoi des valeurs d'objet sur la fifo */
+static void process(int __inputFd, int __outputFd) {
+    if (-1 == __outputFd) {
+        /* envoi des valeurs d'objet sur la fifo */
+    }
 
     /* reception des valeurs, mise a jour des objets */
 }
