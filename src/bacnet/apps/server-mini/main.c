@@ -16,12 +16,13 @@
 #include "bacnet/basic/binding/address.h"
 
 #include "bacnet/basic/object/ao.h"
-#include "bacnet/basic/object/ai.h"
+#include "bacnet/basic/object/bi.h"
 #include "bacnet/basic/object/bo.h"
 #include "bacnet/basic/object/device.h"
 
 #include "bacnet/basic/object/schedule.h"
-#include "bacnet/basic/object/trendlog.h"
+/* #include "bacnet/basic/object/trendlog.h"
+*/
 
 #include "bacnet/basic/services.h"
 #include "bacnet/datalink/datalink.h"
@@ -51,9 +52,9 @@ static BACNET_TIME actual_time;
 static struct tm calendar_time;
 
 /* BACnet Object Instances */
-static uint32_t ai_instance[3];
-static uint32_t ao_instance[3];
-static uint32_t bo_instance[3];
+static uint32_t ao_instance[3] = {};
+static uint32_t bo_instance[3] = {};
+static uint32_t bi_instance[3] = {};
 
 /* Custom Object Table */
 static object_functions_t My_Object_Table[] = {
@@ -101,28 +102,6 @@ static object_functions_t My_Object_Table[] = {
         NULL,
         NULL },
 
-    /* Analog Value (Read-Only) */
-    { OBJECT_ANALOG_INPUT,
-        Analog_Input_Init,
-        Analog_Input_Count,
-        Analog_Input_Index_To_Instance,
-        Analog_Input_Valid_Instance,
-        Analog_Input_Object_Name,
-        Analog_Input_Read_Property,
-        NULL,
-        Analog_Input_Property_Lists,
-        NULL,
-        NULL,
-        Analog_Input_Encode_Value_List,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        Analog_Input_Create,
-        Analog_Input_Delete,
-        NULL },
-
     /* Analog Output (Commandable) */
     { OBJECT_ANALOG_OUTPUT,
         Analog_Output_Init,
@@ -145,6 +124,28 @@ static object_functions_t My_Object_Table[] = {
         Analog_Output_Delete,
         NULL },
 
+   /* Binary Input (Read-Only) */
+    { OBJECT_BINARY_INPUT,
+        Binary_Input_Init,
+        Binary_Input_Count,
+        Binary_Input_Index_To_Instance,
+        Binary_Input_Valid_Instance,
+        Binary_Input_Object_Name,
+        Binary_Input_Read_Property,
+        NULL,                       /* Read-Only */
+        Binary_Input_Property_Lists,
+        NULL,
+        NULL,
+        Binary_Input_Encode_Value_List,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        Binary_Input_Create,
+        Binary_Input_Delete,
+        NULL },
+    
     /* Binary Output (Commandable) */
     { OBJECT_BINARY_OUTPUT,
         Binary_Output_Init,
@@ -191,7 +192,7 @@ static object_functions_t My_Object_Table[] = {
 
 
 /**
- * @brief Initializes the BACnet objects (AV-0, AO-0, BO-0, Schedule).
+ * @brief Initializes the BACnet objects.
  */
 static void initServiceHandlers(void) {
     Device_Init(My_Object_Table);
@@ -203,13 +204,11 @@ static void initServiceHandlers(void) {
     Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
 
     for (uint8_t i = 0; i < 3; i++) {
-        ai_instance[i] = Analog_Input_Create(i);
         ao_instance[i] = Analog_Output_Create(i);
         bo_instance[i] = Binary_Output_Create(i);
+        bi_instance[i] = Binary_Input_Create(i);
 
-        Analog_Input_Name_Set(ai_instance[i], "AI Read Only");
-        Analog_Input_Units_Set(ai_instance[i], UNITS_DEGREES_CELSIUS);
-        Analog_Input_Present_Value_Set(ai_instance[i], 22.5);
+        Binary_Input_Name_Set(bi_instance[i], "BI Read-Only");
 
         Analog_Output_Name_Set(ao_instance[i], "AO Writeable");
         Analog_Output_Units_Set(ao_instance[i], UNITS_PERCENT);
@@ -249,37 +248,32 @@ static void initBacnetStack() {
     Send_I_Am(&Rx_Buf[0]);
 }
 
+struct sendablePresentValue {
+    enum {binary = 1, analog} type;
+    union {
+        uint8_t binary;
+        struct sendableFloat {
+            uint32_t mantissa;
+            uint32_t exponent;
+        } analog;
+    } data;
+};
+
+struct dataPacket {
+    enum BACnetObjectType typeOfObject;
+    uint32_t instanceOfObject;
+    uint8_t tagOfObject;
+
+    struct sendablePresentValue value;
+};
 /**
  * @brief send data of an object through Output FIFO
  */
-static void sendObjectDataToFifo(enum BACnetObjectType __objectType,
-                                uint32_t __objectInstance,
-                                uint8_t __objectTag,
-                                int __fifoFd) {
-    struct sendableFloat {
-        uint32_t mantissa;
-        uint32_t exponent;
-    };
-
-    struct sendablePresentValue {
-        enum {binary = 1, analog} type;
-        union {
-            uint8_t binary;
-            struct sendableFloat analog;
-        } data;
-    };
-
-    struct dataPacket {
-        enum BACnetObjectType typeOfObject;
-        uint32_t instanceOfObject;
-        uint8_t tagOfObject;
-
-        struct sendablePresentValue value;
-    } dataToSend;
+static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __objectInstance, int __fifoFd) {
+    struct dataPacket dataToSend;
 
     dataToSend.typeOfObject = __objectType;
     dataToSend.instanceOfObject = __objectInstance;
-    /* TODO check for TREND_LOG */
     switch (__objectType) {
         case OBJECT_SCHEDULE:
             dataToSend.tagOfObject = Schedule_Object(__objectInstance)->Present_Value.tag;
@@ -291,12 +285,32 @@ static void sendObjectDataToFifo(enum BACnetObjectType __objectType,
                 dataToSend.value.data.binary = Schedule_Object(__objectInstance)->Present_Value.type.Enumerated;
             }
             break;
-        case OBJECT_ANALOG_VALUE:
+        case OBJECT_ANALOG_INPUT:
             dataToSend.tagOfObject = BACNET_APPLICATION_TAG_REAL;
+            dataToSend.value.type = analog;
+            /* get analog value */
+            break;
+        case OBJECT_BINARY_OUTPUT:
+        case OBJECT_BINARY_INPUT:
+            dataToSend.tagOfObject = BACNET_APPLICATION_TAG_ENUMERATED;
+            dataToSend.value.type = binary;
+            dataToSend.value.data.binary = Binary_Input_Present_Value(__objectInstance);
             break;
         default:
             break;
     }
+
+    /* send the datagramm */
+    write(__fifoFd, &dataToSend, sizeof(dataToSend));
+}
+
+/**
+ * @brief read data of an object through Input FIFO
+ */
+static struct dataPacket receiveObjectDataFromFifo(int __fifoFd) {
+    struct dataPacket dataReceived;
+    read(__fifoFd, &dataReceived, sizeof(dataReceived));
+    return dataReceived;
 }
 
 /**
@@ -306,9 +320,11 @@ static void sendObjectDataToFifo(enum BACnetObjectType __objectType,
 static void process(int __inputFd, int __outputFd) {
     if (-1 == __outputFd) {
         /* envoi des valeurs d'objet sur la fifo */
+        sendObjectDataToFifo(OBJECT_ANALOG_OUTPUT, ao_instance[0], __outputFd); 
     }
 
     /* reception des valeurs, mise a jour des objets */
+    struct dataPacket newAnalogInput = receiveObjectDataFromFifo(__inputFd);
 }
 
 /**
