@@ -40,8 +40,8 @@
 #include "bacnet/basic/service/s_iam.h"
 #include "bacnet/basic/sys/platform.h"
 
-#define INPUT_FIFO_PATH "IO/IN_FIFO"
-#define OUTPUT_FIFO_PATH "IO/OUT_FIFO"
+#define INPUT_FIFO_PATH "serverToApp_bacnet"
+#define OUTPUT_FIFO_PATH "appToServer_bacnet"
 
 /* Buffers */
 static uint8_t Rx_Buf[MAX_MPDU] = { 0 };
@@ -52,9 +52,9 @@ static BACNET_TIME actual_time;
 static struct tm calendar_time;
 
 /* BACnet Object Instances */
-static uint32_t ao_instance[3] = {};
-static uint32_t bo_instance[3] = {};
-static uint32_t bi_instance[3] = {};
+static uint32_t ao_instance[3] = {0};
+static uint32_t bo_instance[3] = {0};
+static uint32_t bi_instance[3] = {0};
 
 /* Custom Object Table */
 static object_functions_t My_Object_Table[] = {
@@ -203,7 +203,8 @@ static void initServiceHandlers(void) {
     Schedule_Effective_Period_Set(Schedule_Instance_To_Index(0), &start_date, &end_date);
     Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
 
-    for (uint8_t i = 0; i < 3; i++) {
+    uint8_t i;
+    for(i = 0; i < 3; i++) {
         ao_instance[i] = Analog_Output_Create(i);
         bo_instance[i] = Binary_Output_Create(i);
         bi_instance[i] = Binary_Input_Create(i);
@@ -248,23 +249,18 @@ static void initBacnetStack() {
     Send_I_Am(&Rx_Buf[0]);
 }
 
-struct sendablePresentValue {
-    enum {binary = 1, analog} type;
-    union {
-        uint8_t binary;
+struct dataPacket {
+    enum {SCHEDULE, BINARY_OUTPUT, BINARY_INPUT, ANALOG_INPUT, ANALOG_OUTPUT} typeOfObject;
+    uint32_t instanceOfObject;
+    enum {ENUMERATED, REAL} tagOfObject;
+
+    union sendablePresentValue {
+        bool binary;
         struct sendableFloat {
             uint32_t mantissa;
             uint32_t exponent;
         } analog;
-    } data;
-};
-
-struct dataPacket {
-    enum BACnetObjectType typeOfObject;
-    uint32_t instanceOfObject;
-    uint8_t tagOfObject;
-
-    struct sendablePresentValue value;
+    } value;
 };
 /**
  * @brief send data of an object through Output FIFO
@@ -272,29 +268,45 @@ struct dataPacket {
 static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __objectInstance, int __fifoFd) {
     struct dataPacket dataToSend;
 
-    dataToSend.typeOfObject = __objectType;
     dataToSend.instanceOfObject = __objectInstance;
     switch (__objectType) {
         case OBJECT_SCHEDULE:
-            dataToSend.tagOfObject = Schedule_Object(__objectInstance)->Present_Value.tag;
-            if (dataToSend.tagOfObject == BACNET_APPLICATION_TAG_REAL) {
-                dataToSend.value.type = analog;
+            dataToSend.typeOfObject = SCHEDULE;
+            if (Schedule_Object(__objectInstance)->Present_Value.tag == BACNET_APPLICATION_TAG_REAL) {
+                dataToSend.tagOfObject = REAL;
                 /* get analog value */
-            } else if (dataToSend.tagOfObject == BACNET_APPLICATION_TAG_ENUMERATED) {
-                dataToSend.value.type = binary;
-                dataToSend.value.data.binary = Schedule_Object(__objectInstance)->Present_Value.type.Enumerated;
+            } else if (Schedule_Object(__objectInstance)->Present_Value.tag == BACNET_APPLICATION_TAG_ENUMERATED) {
+                dataToSend.tagOfObject = ENUMERATED;
+                dataToSend.value.binary = Schedule_Object(__objectInstance)->Present_Value.type.Enumerated;
             }
             break;
         case OBJECT_ANALOG_INPUT:
-            dataToSend.tagOfObject = BACNET_APPLICATION_TAG_REAL;
-            dataToSend.value.type = analog;
+            dataToSend.typeOfObject = ANALOG_INPUT;
+            dataToSend.tagOfObject = REAL;
+            /* get analog value */
+            break;
+        case OBJECT_ANALOG_OUTPUT:
+            dataToSend.typeOfObject = ANALOG_OUTPUT;
+            dataToSend.tagOfObject = REAL;
             /* get analog value */
             break;
         case OBJECT_BINARY_OUTPUT:
+            dataToSend.typeOfObject = BINARY_OUTPUT;
+            dataToSend.tagOfObject = ENUMERATED;
+            if(Binary_Input_Present_Value(__objectInstance) == BINARY_ACTIVE) {
+                dataToSend.value.binary = true;            
+            } else {
+                dataToSend.value.binary = false;
+            }
+            break;
         case OBJECT_BINARY_INPUT:
+            dataToSend.typeOfObject = BINARY_INPUT;
             dataToSend.tagOfObject = BACNET_APPLICATION_TAG_ENUMERATED;
-            dataToSend.value.type = binary;
-            dataToSend.value.data.binary = Binary_Input_Present_Value(__objectInstance);
+            if(Binary_Input_Present_Value(__objectInstance) == BINARY_ACTIVE) {
+                dataToSend.value.binary = true;            
+            } else {
+                dataToSend.value.binary = false;
+            }
             break;
         default:
             break;
@@ -324,7 +336,10 @@ static void process(int __inputFd, int __outputFd) {
     }
 
     /* reception des valeurs, mise a jour des objets */
-    struct dataPacket newAnalogInput = receiveObjectDataFromFifo(__inputFd);
+    struct dataPacket newBinaryInput = receiveObjectDataFromFifo(__inputFd);
+    if(newBinaryInput.value.binary) {
+        Binary_Input_Present_Value_Set(newBinaryInput.instanceOfObject, BINARY_ACTIVE);
+    }
 }
 
 /**
