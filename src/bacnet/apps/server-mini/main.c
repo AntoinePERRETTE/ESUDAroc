@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 /* BACnet Stack includes */
 #include "bacnet/apdu.h"
@@ -40,8 +41,8 @@
 #include "bacnet/basic/service/s_iam.h"
 #include "bacnet/basic/sys/platform.h"
 
-#define INPUT_FIFO_PATH "serverToApp_bacnet"
-#define OUTPUT_FIFO_PATH "appToServer_bacnet"
+#define INPUT_FIFO_PATH "appToServer"
+#define OUTPUT_FIFO_PATH "serverToApp"
 
 /* Buffers */
 static uint8_t Rx_Buf[MAX_MPDU] = { 0 };
@@ -145,7 +146,7 @@ static object_functions_t My_Object_Table[] = {
         Binary_Input_Create,
         Binary_Input_Delete,
         NULL },
-    
+
     /* Binary Output (Commandable) */
     { OBJECT_BINARY_OUTPUT,
         Binary_Output_Init,
@@ -254,12 +255,9 @@ struct dataPacket {
     uint32_t instanceOfObject;
     enum {ENUMERATED, REAL} tagOfObject;
 
-    union sendablePresentValue {
+    union {
         bool binary;
-        struct sendableFloat {
-            uint32_t mantissa;
-            uint32_t exponent;
-        } analog;
+        float analog;
     } value;
 };
 /**
@@ -268,13 +266,15 @@ struct dataPacket {
 static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __objectInstance, int __fifoFd) {
     struct dataPacket dataToSend;
 
+    /* serialyse data */
+
     dataToSend.instanceOfObject = __objectInstance;
     switch (__objectType) {
         case OBJECT_SCHEDULE:
             dataToSend.typeOfObject = SCHEDULE;
             if (Schedule_Object(__objectInstance)->Present_Value.tag == BACNET_APPLICATION_TAG_REAL) {
                 dataToSend.tagOfObject = REAL;
-                /* get analog value */
+                dataToSend.value.analog = Schedule_Object(__objectInstance)->Present_Value.type.Real;
             } else if (Schedule_Object(__objectInstance)->Present_Value.tag == BACNET_APPLICATION_TAG_ENUMERATED) {
                 dataToSend.tagOfObject = ENUMERATED;
                 dataToSend.value.binary = Schedule_Object(__objectInstance)->Present_Value.type.Enumerated;
@@ -283,27 +283,27 @@ static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __
         case OBJECT_ANALOG_INPUT:
             dataToSend.typeOfObject = ANALOG_INPUT;
             dataToSend.tagOfObject = REAL;
-            /* get analog value */
+            dataToSend.value.analog = Analog_Output_Present_Value(__objectInstance);
             break;
         case OBJECT_ANALOG_OUTPUT:
             dataToSend.typeOfObject = ANALOG_OUTPUT;
             dataToSend.tagOfObject = REAL;
-            /* get analog value */
+            dataToSend.value.analog = Analog_Output_Present_Value(__objectInstance);
             break;
         case OBJECT_BINARY_OUTPUT:
             dataToSend.typeOfObject = BINARY_OUTPUT;
             dataToSend.tagOfObject = ENUMERATED;
-            if(Binary_Input_Present_Value(__objectInstance) == BINARY_ACTIVE) {
-                dataToSend.value.binary = true;            
+            if(Binary_Output_Present_Value(__objectInstance) == BINARY_ACTIVE) {
+                dataToSend.value.binary = true;
             } else {
                 dataToSend.value.binary = false;
             }
             break;
         case OBJECT_BINARY_INPUT:
             dataToSend.typeOfObject = BINARY_INPUT;
-            dataToSend.tagOfObject = BACNET_APPLICATION_TAG_ENUMERATED;
+            dataToSend.tagOfObject = ENUMERATED;
             if(Binary_Input_Present_Value(__objectInstance) == BINARY_ACTIVE) {
-                dataToSend.value.binary = true;            
+                dataToSend.value.binary = true;
             } else {
                 dataToSend.value.binary = false;
             }
@@ -313,7 +313,9 @@ static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __
     }
 
     /* send the datagramm */
-    write(__fifoFd, &dataToSend, sizeof(dataToSend));
+    if (-1 == write(__fifoFd, &dataToSend, sizeof(dataToSend))) {
+        printf("impossible to write to FIFO %s\r\n", strerror(errno));
+    }
 }
 
 /**
@@ -321,7 +323,9 @@ static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __
  */
 static struct dataPacket receiveObjectDataFromFifo(int __fifoFd) {
     struct dataPacket dataReceived;
-    read(__fifoFd, &dataReceived, sizeof(dataReceived));
+    if (-1 == read(__fifoFd, &dataReceived, sizeof(dataReceived))) {
+        printf("impossible to read from FIFO %s\r\n", strerror(errno));
+    }
     return dataReceived;
 }
 
@@ -330,15 +334,33 @@ static struct dataPacket receiveObjectDataFromFifo(int __fifoFd) {
  * Update present value from value received by FIFO
  */
 static void process(int __inputFd, int __outputFd) {
-    if (-1 == __outputFd) {
+    printf("\rRunning ...\r\n");
+    if (-1 != __outputFd) {
         /* envoi des valeurs d'objet sur la fifo */
-        sendObjectDataToFifo(OBJECT_ANALOG_OUTPUT, ao_instance[0], __outputFd); 
+        sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[0], __outputFd);
+        sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[1], __outputFd);
+        sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[2], __outputFd);
+
+        sendObjectDataToFifo(OBJECT_ANALOG_OUTPUT, ao_instance[0], __outputFd);
+        sendObjectDataToFifo(OBJECT_ANALOG_OUTPUT, ao_instance[1], __outputFd);
+        sendObjectDataToFifo(OBJECT_ANALOG_OUTPUT, ao_instance[2], __outputFd);
+    } else {
+        printf("output fifo not openned !!");
     }
 
     /* reception des valeurs, mise a jour des objets */
-    struct dataPacket newBinaryInput = receiveObjectDataFromFifo(__inputFd);
-    if(newBinaryInput.value.binary) {
-        Binary_Input_Present_Value_Set(newBinaryInput.instanceOfObject, BINARY_ACTIVE);
+    uint8_t i = 0;
+    for (; i < 3; i++) {
+        struct dataPacket newBinaryInput = receiveObjectDataFromFifo(__inputFd);
+        if (-1 != __inputFd) {
+            if (newBinaryInput.value.binary == true) {
+                Binary_Input_Present_Value_Set(newBinaryInput.instanceOfObject, BINARY_ACTIVE);
+            } else {
+                Binary_Input_Present_Value_Set(newBinaryInput.instanceOfObject, BINARY_INACTIVE);
+            }
+        } else {
+            printf("input fifo not openned !!");
+        }
     }
 }
 
@@ -356,11 +378,11 @@ int main() {
     int outFifoFd = -1;
 
     /* if fifo don't exist, create new one */
-    if (-1 == mkfifo(OUTPUT_FIFO_PATH, 0400)) {
+    if (-1 == mkfifo(OUTPUT_FIFO_PATH, 0666)) {
         perror("An error occured when creating FIFO");
         exit(EXIT_FAILURE);
     }
-    if (-1 == mkfifo(INPUT_FIFO_PATH, 0200)) {
+    if (-1 == mkfifo(INPUT_FIFO_PATH, 0666)) {
         perror("An error occured when creating FIFO");
         exit(EXIT_FAILURE);
     }
@@ -382,12 +404,12 @@ int main() {
         actual_time.min = calendar_time.tm_min;
         actual_time.sec = calendar_time.tm_sec;
 
-        if (inFifoFd == -1) {
-            inFifoFd = open(INPUT_FIFO_PATH, O_RDONLY);
-        }
-
         if (outFifoFd == -1) {
             outFifoFd = open(OUTPUT_FIFO_PATH, O_WRONLY);
+        }
+
+        if (inFifoFd == -1) {
+            inFifoFd = open(INPUT_FIFO_PATH, O_RDONLY);
         }
 
         process(inFifoFd, outFifoFd);
