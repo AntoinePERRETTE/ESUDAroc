@@ -1,3 +1,4 @@
+#include <asm-generic/errno-base.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -13,6 +14,7 @@
 #include "bacnet/apdu.h"
 #include "bacnet/bacdcode.h"
 #include "bacnet/bacdef.h"
+#include "bacnet/bacenum.h"
 #include "bacnet/bactext.h"
 #include "bacnet/basic/binding/address.h"
 
@@ -354,22 +356,18 @@ static void process(int __inputFd, int __outputFd) {
     }
 
     /* reception des valeurs, mise a jour des objets */
+    /* !!! on reçoie uniquement 3 BinaryInput !!! */
     uint8_t i = 0;
     for (; i < 3; i++) {
         struct dataPacket newBinaryInput = receiveObjectDataFromFifo(__inputFd);
         if (-1 != __inputFd) {
-            if (newBinaryInput.value.binary == true) {
-                Binary_Input_Present_Value_Set(newBinaryInput.instanceOfObject, BINARY_ACTIVE);
-            } else {
-                Binary_Input_Present_Value_Set(newBinaryInput.instanceOfObject, BINARY_INACTIVE);
+            if (newBinaryInput.value.binary != Binary_Input_Present_Value(newBinaryInput.instanceOfObject)) {
+                Binary_Input_Present_Value_Set(newBinaryInput.instanceOfObject, (BACNET_BINARY_PV) newBinaryInput.value.binary);
             }
         } else {
             printf("input fifo not openned !! %s\r\n", strerror(errno));
         }
     }
-
-    /* mise a jour schedule */
-    Schedule_Recalculate_PV(Schedule_Object(0), actual_day, (const BACNET_TIME *) &actual_time);
 }
 
 /**
@@ -385,12 +383,14 @@ int main() {
     int inFifoFd = -1;
     int outFifoFd = -1;
 
-    /* if fifo don't exist, create new one */
-    if (-1 == mkfifo(OUTPUT_FIFO_PATH, 0666)) {
+    /* if fifo don't exist, create new one
+     * if fifo exist already, just pass
+     */
+    if (-1 == mkfifo(OUTPUT_FIFO_PATH, 0666) && errno != EEXIST) {
         perror("An error occured when creating FIFO");
         exit(EXIT_FAILURE);
     }
-    if (-1 == mkfifo(INPUT_FIFO_PATH, 0666)) {
+    if (-1 == mkfifo(INPUT_FIFO_PATH, 0666) && errno != EEXIST) {
         perror("An error occured when creating FIFO");
         exit(EXIT_FAILURE);
     }
@@ -411,6 +411,9 @@ int main() {
         actual_time.hour = calendar_time.tm_hour;
         actual_time.min = calendar_time.tm_min;
         actual_time.sec = calendar_time.tm_sec;
+
+        /* mise a jour schedule */
+        Schedule_Recalculate_PV(Schedule_Object(0), actual_day, (const BACNET_TIME *) &actual_time);
 
         if (outFifoFd == -1) {
             outFifoFd = open(OUTPUT_FIFO_PATH, O_WRONLY);
