@@ -335,8 +335,8 @@ static struct dataPacket receiveObjectDataFromFifo(int __fifoFd) {
  */
 static void process(int __inputFd, int __outputFd) {
     printf("\rRunning ...\r\n");
-    if (-1 != __outputFd) {
         /* envoi des valeurs d'objet sur la fifo */
+    if (-1 != __outputFd) {
         sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[0], __outputFd);
         sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[1], __outputFd);
         sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[2], __outputFd);
@@ -344,8 +344,13 @@ static void process(int __inputFd, int __outputFd) {
         sendObjectDataToFifo(OBJECT_ANALOG_OUTPUT, ao_instance[0], __outputFd);
         sendObjectDataToFifo(OBJECT_ANALOG_OUTPUT, ao_instance[1], __outputFd);
         sendObjectDataToFifo(OBJECT_ANALOG_OUTPUT, ao_instance[2], __outputFd);
+
+        sendObjectDataToFifo(OBJECT_SCHEDULE, 0, __outputFd);
+        sendObjectDataToFifo(OBJECT_SCHEDULE, 1, __outputFd);
+        sendObjectDataToFifo(OBJECT_SCHEDULE, 2, __outputFd);
+        sendObjectDataToFifo(OBJECT_SCHEDULE, 3, __outputFd);
     } else {
-        printf("output fifo not openned !!");
+        printf("output fifo not openned !! %s\r\n", strerror(errno));
     }
 
     /* reception des valeurs, mise a jour des objets */
@@ -359,9 +364,12 @@ static void process(int __inputFd, int __outputFd) {
                 Binary_Input_Present_Value_Set(newBinaryInput.instanceOfObject, BINARY_INACTIVE);
             }
         } else {
-            printf("input fifo not openned !!");
+            printf("input fifo not openned !! %s\r\n", strerror(errno));
         }
     }
+
+    /* mise a jour schedule */
+    Schedule_Recalculate_PV(Schedule_Object(0), actual_day, (const BACNET_TIME *) &actual_time);
 }
 
 /**

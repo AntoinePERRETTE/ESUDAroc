@@ -13,10 +13,11 @@
 #define OUTPUT_FIFO_PATH "serverToApp"
 
 #define NUMBER_OF_INPUT 3
-#define NUMBER_OF_OUTPUT 6
+#define NUMBER_OF_OUTPUT 10
 #define NUMBER_OF_BINARY_INPUT NUMBER_OF_INPUT
 #define NUMBER_OF_BINARY_OUTPUT 3
 #define NUMBER_OF_ANALOG_OUTPUT 3
+#define NUMBER_OF_SCHEDULE 4
 
 void exitWithError(void) {
     perror("\r\nAn error occured");
@@ -67,6 +68,14 @@ int main() {
                     break;
                 case ANALOG_OUTPUT:
                     printf("Analog Object %d -> %f\r\n", newDataOutput[i].instanceOfObject, newDataOutput[i].value.analog);
+                    break;
+                case SCHEDULE:
+                    printf("Schedule Object %d ", newDataOutput[i].instanceOfObject);
+                    if (newDataOutput[i].tagOfObject == REAL) {
+                        printf("(REAL) -> %f\r\n", newDataOutput[i].value.analog);
+                    } else {
+                        printf("(ENUMERATED) -> %d\r\n", newDataOutput[i].value.binary);
+                    }
                     break;
                 default:
                     break;
