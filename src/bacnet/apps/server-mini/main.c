@@ -18,6 +18,7 @@
 #include "bacnet/bactext.h"
 #include "bacnet/basic/binding/address.h"
 
+#include "bacnet/basic/object/ai.h"
 #include "bacnet/basic/object/ao.h"
 #include "bacnet/basic/object/bi.h"
 #include "bacnet/basic/object/bo.h"
@@ -288,7 +289,7 @@ static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __
         case OBJECT_ANALOG_INPUT:
             dataToSend.typeOfObject = ANALOG_INPUT;
             dataToSend.tagOfObject = REAL;
-            dataToSend.value.analog = Analog_Output_Present_Value(__objectInstance);
+            dataToSend.value.analog = Analog_Input_Present_Value(__objectInstance);
             break;
         case OBJECT_ANALOG_OUTPUT:
             dataToSend.typeOfObject = ANALOG_OUTPUT;
@@ -376,7 +377,7 @@ static void readDataFromApp(int __inputFd) {
                 }
                 break;
             case ANALOG_OUTPUT:
-                Analog_Output_Present_Value_Set(newData.instanceOfObject, (BACNET_BINARY_PV) newData.value.analog, BACNET_MAX_PRIORITY);
+                Analog_Output_Present_Value_Set(newData.instanceOfObject, newData.value.analog, BACNET_MAX_PRIORITY);
                 break;
             default:
                 break;

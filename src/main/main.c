@@ -162,8 +162,14 @@ int main() {
         /* Schedule[N]->PresentValue => BinaryOutput[N]->PresentValue */
         if (Schedule[0].tagOfObject == ENUMERATED) {
             BinaryOutput[0].value.binary = Schedule[0].value.binary;
+        } else if (Schedule[1].tagOfObject == ENUMERATED) {
+            BinaryOutput[1].value.binary = Schedule[1].value.binary;
+        } else if (Schedule[2].tagOfObject == ENUMERATED) {
+            BinaryOutput[2].value.binary = Schedule[2].value.binary;
+        } else if (Schedule[3].tagOfObject == REAL) {
+            AnalogOutput[0].value.analog = Schedule[3].value.analog;
         } else {
-            printf("Error : A BinaryOutput value cannot be set with a REAL Schedule\r\n");
+            printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
         }
 
         /* Update output object value */
