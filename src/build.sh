@@ -5,7 +5,7 @@ echo "building BACnet stack & server\r\n"
 cd bacnet
 make server-mini
 echo "copying BACnet server into /bin\r\n"
-cp /bin/bacmini ../bin/
+cp bin/bacmini ../bin/
 cd ..
 
 echo "building app\r\n"
