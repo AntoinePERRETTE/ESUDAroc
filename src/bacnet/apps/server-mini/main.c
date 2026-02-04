@@ -18,6 +18,7 @@
 #include "bacnet/bactext.h"
 #include "bacnet/basic/binding/address.h"
 
+#include "bacnet/basic/object/ai.h"
 #include "bacnet/basic/object/ao.h"
 #include "bacnet/basic/object/bi.h"
 #include "bacnet/basic/object/bo.h"
@@ -204,6 +205,9 @@ static void initServiceHandlers(void) {
     BACNET_DATE end_date = { 2130, 1, 1, 1 };
 
     Schedule_Effective_Period_Set(Schedule_Instance_To_Index(0), &start_date, &end_date);
+    Schedule_Effective_Period_Set(Schedule_Instance_To_Index(1), &start_date, &end_date);
+    Schedule_Effective_Period_Set(Schedule_Instance_To_Index(2), &start_date, &end_date);
+    Schedule_Effective_Period_Set(Schedule_Instance_To_Index(3), &start_date, &end_date);
     Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
     Schedule_Object(1)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
     Schedule_Object(2)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
@@ -288,7 +292,7 @@ static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __
         case OBJECT_ANALOG_INPUT:
             dataToSend.typeOfObject = ANALOG_INPUT;
             dataToSend.tagOfObject = REAL;
-            dataToSend.value.analog = Analog_Output_Present_Value(__objectInstance);
+            dataToSend.value.analog = Analog_Input_Present_Value(__objectInstance);
             break;
         case OBJECT_ANALOG_OUTPUT:
             dataToSend.typeOfObject = ANALOG_OUTPUT;
@@ -376,7 +380,7 @@ static void readDataFromApp(int __inputFd) {
                 }
                 break;
             case ANALOG_OUTPUT:
-                Analog_Output_Present_Value_Set(newData.instanceOfObject, (BACNET_BINARY_PV) newData.value.analog, BACNET_MAX_PRIORITY);
+                Analog_Output_Present_Value_Set(newData.instanceOfObject, newData.value.analog, BACNET_MAX_PRIORITY);
                 break;
             default:
                 break;
@@ -447,6 +451,9 @@ int main() {
 
         /* mise a jour schedule */
         Schedule_Recalculate_PV(Schedule_Object(0), actual_day, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(1), actual_day, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(2), actual_day, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(3), actual_day, (const BACNET_TIME *) &actual_time);
 
         if (outFifoFd == -1) {
             outFifoFd = open(OUTPUT_FIFO_PATH, O_WRONLY);
