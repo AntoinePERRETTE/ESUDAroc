@@ -205,6 +205,9 @@ static void initServiceHandlers(void) {
     BACNET_DATE end_date = { 2130, 1, 1, 1 };
 
     Schedule_Effective_Period_Set(Schedule_Instance_To_Index(0), &start_date, &end_date);
+    Schedule_Effective_Period_Set(Schedule_Instance_To_Index(1), &start_date, &end_date);
+    Schedule_Effective_Period_Set(Schedule_Instance_To_Index(2), &start_date, &end_date);
+    Schedule_Effective_Period_Set(Schedule_Instance_To_Index(3), &start_date, &end_date);
     Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
     Schedule_Object(1)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
     Schedule_Object(2)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
