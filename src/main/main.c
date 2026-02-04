@@ -9,6 +9,16 @@
 #include <errno.h>
 #include <string.h>
 
+#include "gestion_gpio.h"
+
+#define LINE_INPUT_0 0
+#define LINE_INPUT_1 2
+#define LINE_INPUT_2 4
+
+#define LINE_OUTPUT_0 0
+#define LINE_OUTPUT_1 2
+#define LINE_OUTPUT_2 4
+
 #define INPUT_FIFO_PATH "appToServer"
 #define OUTPUT_FIFO_PATH "serverToApp"
 
@@ -145,9 +155,9 @@ int main() {
 
         /* Update Object Value*/
         /* read data from gpio */
-        BinaryInput[0].value.binary ^= true;
-        BinaryInput[1].value.binary ^= BinaryInput[0].value.binary;
-        BinaryInput[2].value.binary ^= BinaryInput[1].value.binary;
+        BinaryInput[0].value.binary = gpio_read_input_value(LINE_INPUT_0);
+        BinaryInput[1].value.binary = gpio_read_input_value(LINE_INPUT_1);
+        BinaryInput[2].value.binary = gpio_read_input_value(LINE_INPUT_2);
 
         /* Schedule[N]->PresentValue => BinaryOutput[N]->PresentValue */
         if (Schedule[0].tagOfObject == ENUMERATED) {
@@ -155,6 +165,11 @@ int main() {
         } else {
             printf("Error : A BinaryOutput value cannot be set with a REAL Schedule\r\n");
         }
+
+        /* Update output object value */
+        gpio_write_output_value(LINE_OUTPUT_0, BinaryOutput[0].value.binary);
+        gpio_write_output_value(LINE_OUTPUT_1, BinaryOutput[1].value.binary);
+        gpio_write_output_value(LINE_OUTPUT_2, BinaryOutput[2].value.binary);
 
         printf("\r\n------ New value as input ------\r\n");
         printf("Binary Object %d -> %d\r\n", BinaryInput[0].instanceOfObject, BinaryInput[0].value.binary);
