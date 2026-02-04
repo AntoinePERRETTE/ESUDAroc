@@ -1,0 +1,19 @@
+// Project-local debug tasks
+//
+// For more documentation on how to configure debug tasks,
+// see: https://zed.dev/docs/debugger
+
+// Debug config for BACnet app
+[
+  {
+    "label": "Debug BACnet app",
+    "build": {
+      "command": "gcc",
+      "args": ["-Wall -Wextra -Werror -g main.c"],
+      "cwd": "$ZED_WORKTREE_ROOT/main",
+    },
+    "program": "$ZED_WORKTREE_ROOT/bin/app.out",
+    "request": "launch",
+    "adapter": "CodeLLDB",
+  },
+]

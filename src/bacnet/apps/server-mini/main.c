@@ -205,6 +205,9 @@ static void initServiceHandlers(void) {
 
     Schedule_Effective_Period_Set(Schedule_Instance_To_Index(0), &start_date, &end_date);
     Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
+    Schedule_Object(1)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
+    Schedule_Object(2)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
+    Schedule_Object(3)->Present_Value.tag = BACNET_APPLICATION_TAG_REAL;
 
     uint8_t i;
     for(i = 0; i < 3; i++) {
@@ -331,13 +334,7 @@ static struct dataPacket receiveObjectDataFromFifo(int __fifoFd) {
     return dataReceived;
 }
 
-/**
- * @brief Output the present value if possible (FIFO openned from both side)
- * Update present value from value received by FIFO
- */
-static void process(int __inputFd, int __outputFd) {
-    printf("\rRunning ...\r\n");
-        /* envoi des valeurs d'objet sur la fifo */
+static void sendDataToApp(int __outputFd) {
     if (-1 != __outputFd) {
         sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[0], __outputFd);
         sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[1], __outputFd);
@@ -354,20 +351,56 @@ static void process(int __inputFd, int __outputFd) {
     } else {
         printf("output fifo not openned !! %s\r\n", strerror(errno));
     }
+}
 
-    /* reception des valeurs, mise a jour des objets */
-    /* !!! on reçoie uniquement 3 BinaryInput !!! */
+static void readDataFromApp(int __inputFd) {
+    if (-1 == __inputFd) {
+        printf("input fifo not openned !! %s\r\n", strerror(errno));
+        return;
+    }
+
+    /* !!! on ne reçoie par les schedules (aucune raison d'être modifié par l'app) !!! */
+    /* TODO : Check object type & object tag validity between received data and local object */
     uint8_t i = 0;
-    for (; i < 3; i++) {
-        struct dataPacket newBinaryInput = receiveObjectDataFromFifo(__inputFd);
-        if (-1 != __inputFd) {
-            if (newBinaryInput.value.binary != Binary_Input_Present_Value(newBinaryInput.instanceOfObject)) {
-                Binary_Input_Present_Value_Set(newBinaryInput.instanceOfObject, (BACNET_BINARY_PV) newBinaryInput.value.binary);
-            }
-        } else {
-            printf("input fifo not openned !! %s\r\n", strerror(errno));
+    for (; i < 9; i++) {
+        struct dataPacket newData = receiveObjectDataFromFifo(__inputFd);
+        switch (newData.typeOfObject) {
+            case BINARY_INPUT:
+                if (newData.value.binary != Binary_Input_Present_Value(newData.instanceOfObject)) {
+                    Binary_Input_Present_Value_Set(newData.instanceOfObject, (BACNET_BINARY_PV) newData.value.binary);
+                }
+                break;
+            case BINARY_OUTPUT:
+                if (newData.value.binary != Binary_Output_Present_Value(newData.instanceOfObject)) {
+                    Binary_Output_Present_Value_Set(newData.instanceOfObject, (BACNET_BINARY_PV) newData.value.binary, BACNET_MAX_PRIORITY);
+                }
+                break;
+            case ANALOG_OUTPUT:
+                Analog_Output_Present_Value_Set(newData.instanceOfObject, (BACNET_BINARY_PV) newData.value.analog, BACNET_MAX_PRIORITY);
+                break;
+            default:
+                break;
         }
     }
+}
+
+/**
+ * @brief Output the present value if possible (FIFO openned from both side)
+ * Update present value from value received by FIFO
+ */
+static void process(int __inputFd, int __outputFd) {
+    static enum {START, SEND, RECEIVE} processState;
+
+    if (processState == START) processState = SEND;
+    else if (processState == SEND) {
+        /* envoi des valeurs d'objet sur la fifo */
+        sendDataToApp(__outputFd);
+        processState = RECEIVE;
+    } else if (processState == RECEIVE) {
+        /* reception des valeurs, mise a jour des objets */
+        readDataFromApp(__inputFd);
+        processState = SEND;
+    } else processState = START;
 }
 
 /**
