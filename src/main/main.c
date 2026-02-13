@@ -118,8 +118,6 @@ int main() {
                     BinaryOutput[instance].tagOfObject = newDataOutput[i].tagOfObject;
                     BinaryOutput[instance].value.binary = newDataOutput[i].value.binary;
 
-                    /* debug */
-                    printf("BinaryOutput %d -> %d\r\n", newDataOutput[i].instanceOfObject, newDataOutput[i].value.binary);
                     break;
                 case ANALOG_OUTPUT:
                     instance = newDataOutput[i].instanceOfObject;
@@ -127,8 +125,6 @@ int main() {
                     AnalogOutput[instance].tagOfObject = newDataOutput[i].tagOfObject;
                     AnalogOutput[instance].value.analog = newDataOutput[i].value.analog;
 
-                    /* debug */
-                    printf("AnalogOutput %d -> %f\r\n", newDataOutput[i].instanceOfObject, newDataOutput[i].value.analog);
                     break;
                 case SCHEDULE:
                     instance = newDataOutput[i].instanceOfObject;
@@ -141,7 +137,6 @@ int main() {
                     }
 
                     /* debug */
-                    printf("Schedule Object %d ", newDataOutput[i].instanceOfObject);
                     if (newDataOutput[i].tagOfObject == REAL) {
                         printf("(REAL) -> %f\r\n", newDataOutput[i].value.analog);
                     } else {
@@ -173,10 +168,24 @@ int main() {
             gpio_write_output_value(LINE_OUTPUT_2, Schedule[2].value.binary | BinaryOutput[2].value.binary);
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
+        printf("\r\n------ output value ------\r\n");
+        printf("Binary Output Object %d -> %d\r\n", BinaryOutput[0].instanceOfObject, BinaryOutput[0].value.binary);
+        printf("Binary Output Object %d -> %d\r\n", BinaryOutput[1].instanceOfObject, BinaryOutput[1].value.binary);
+        printf("Binary Output Object %d -> %d\r\n", BinaryOutput[2].instanceOfObject, BinaryOutput[2].value.binary);
+
+        printf("Analog Output Object %d -> %f\r\n", AnalogOutput[0].instanceOfObject, AnalogOutput[0].value.analog);
+        printf("Analog Output Object %d -> %f\r\n", AnalogOutput[1].instanceOfObject, AnalogOutput[1].value.analog);
+        printf("Analog Output Object %d -> %f\r\n", AnalogOutput[2].instanceOfObject, AnalogOutput[2].value.analog);
+
+        printf("Schedule Object %d -> %d\r\n", Schedule[0].instanceOfObject, Schedule[0].value.binary);
+        printf("Schedule Object %d -> %d\r\n", Schedule[1].instanceOfObject, Schedule[1].value.binary);
+        printf("Schedule Object %d -> %d\r\n", Schedule[2].instanceOfObject, Schedule[2].value.binary);
+        printf("Schedule Object %d -> %d\r\n", Schedule[3].instanceOfObject, Schedule[2].value.binary);
+
         printf("\r\n------ New value as input ------\r\n");
-        printf("Binary Object %d -> %d\r\n", BinaryInput[0].instanceOfObject, BinaryInput[0].value.binary);
-        printf("Binary Object %d -> %d\r\n", BinaryInput[1].instanceOfObject, BinaryInput[1].value.binary);
-        printf("Binary Object %d -> %d\r\n", BinaryInput[2].instanceOfObject, BinaryInput[2].value.binary);
+        printf("Binary Input Object %d -> %d\r\n", BinaryInput[0].instanceOfObject, BinaryInput[0].value.binary);
+        printf("Binary Input Object %d -> %d\r\n", BinaryInput[1].instanceOfObject, BinaryInput[1].value.binary);
+        printf("Binary Input Object %d -> %d\r\n", BinaryInput[2].instanceOfObject, BinaryInput[2].value.binary);
 
         /* prepare new data for server */
         for (uint8_t i = 0; i < NUMBER_OF_BINARY_INPUT; i++) {
