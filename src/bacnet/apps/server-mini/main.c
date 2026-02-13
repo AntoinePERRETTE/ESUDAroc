@@ -211,7 +211,7 @@ static void initServiceHandlers(void) {
     Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
     Schedule_Object(1)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
     Schedule_Object(2)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
-    Schedule_Object(3)->Present_Value.tag = BACNET_APPLICATION_TAG_REAL;
+    Schedule_Object(3)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
 
     uint8_t i;
     for(i = 0; i < 3; i++) {
@@ -363,10 +363,9 @@ static void readDataFromApp(int __inputFd) {
         return;
     }
 
-    /* !!! on ne reçoie par les schedules (aucune raison d'être modifié par l'app) !!! */
     /* TODO : Check object type & object tag validity between received data and local object */
     uint8_t i = 0;
-    for (; i < 9; i++) {
+    for (; i < 3; i++) {
         struct dataPacket newData = receiveObjectDataFromFifo(__inputFd);
         switch (newData.typeOfObject) {
             case BINARY_INPUT:
@@ -374,13 +373,8 @@ static void readDataFromApp(int __inputFd) {
                     Binary_Input_Present_Value_Set(newData.instanceOfObject, (BACNET_BINARY_PV) newData.value.binary);
                 }
                 break;
-            case BINARY_OUTPUT:
-                if (newData.value.binary != Binary_Output_Present_Value(newData.instanceOfObject)) {
-                    Binary_Output_Present_Value_Set(newData.instanceOfObject, (BACNET_BINARY_PV) newData.value.binary, BACNET_MAX_PRIORITY);
-                }
-                break;
-            case ANALOG_OUTPUT:
-                Analog_Output_Present_Value_Set(newData.instanceOfObject, newData.value.analog, BACNET_MAX_PRIORITY);
+            case ANALOG_INPUT:
+                Analog_Input_Present_Value_Set(newData.instanceOfObject, newData.value.analog);
                 break;
             default:
                 break;

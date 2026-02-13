@@ -153,59 +153,40 @@ int main() {
             }
         }
 
-        /* Update Object Value*/
+        /* Update Value*/
         /* read data from gpio */
         BinaryInput[0].value.binary = gpio_read_input_value(LINE_INPUT_0);
         BinaryInput[1].value.binary = gpio_read_input_value(LINE_INPUT_1);
         BinaryInput[2].value.binary = gpio_read_input_value(LINE_INPUT_2);
 
+        /* Update output value */
         /* Schedule[N]->PresentValue => BinaryOutput[N]->PresentValue */
         if (Schedule[0].tagOfObject == ENUMERATED) {
-            BinaryOutput[0].value.binary = Schedule[0].value.binary | BinaryOutput[0].value.binary;
+            gpio_write_output_value(LINE_OUTPUT_0, Schedule[0].value.binary | BinaryOutput[0].value.binary);
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         if (Schedule[1].tagOfObject == ENUMERATED) {
-            BinaryOutput[1].value.binary = Schedule[1].value.binary | BinaryOutput[1].value.binary;
+            gpio_write_output_value(LINE_OUTPUT_1, Schedule[1].value.binary | BinaryOutput[1].value.binary);
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         if (Schedule[2].tagOfObject == ENUMERATED) {
-            BinaryOutput[2].value.binary = Schedule[2].value.binary | BinaryOutput[2].value.binary;
+            gpio_write_output_value(LINE_OUTPUT_2, Schedule[2].value.binary | BinaryOutput[2].value.binary);
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
-
-        if (Schedule[3].tagOfObject == REAL) {
-            AnalogOutput[0].value.analog = Schedule[3].value.analog;
-        } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
-
-        /* Update output object value */
-        gpio_write_output_value(LINE_OUTPUT_0, BinaryOutput[0].value.binary);
-        gpio_write_output_value(LINE_OUTPUT_1, BinaryOutput[1].value.binary);
-        gpio_write_output_value(LINE_OUTPUT_2, BinaryOutput[2].value.binary);
 
         printf("\r\n------ New value as input ------\r\n");
         printf("Binary Object %d -> %d\r\n", BinaryInput[0].instanceOfObject, BinaryInput[0].value.binary);
         printf("Binary Object %d -> %d\r\n", BinaryInput[1].instanceOfObject, BinaryInput[1].value.binary);
         printf("Binary Object %d -> %d\r\n", BinaryInput[2].instanceOfObject, BinaryInput[2].value.binary);
 
-        /* prepare data to server with actual object */
+        /* prepare new data for server */
         for (uint8_t i = 0; i < NUMBER_OF_BINARY_INPUT; i++) {
             newDataInput[i].instanceOfObject = BinaryInput[i].instanceOfObject;
             newDataInput[i].typeOfObject = BinaryInput[i].typeOfObject;
             newDataInput[i].tagOfObject = BinaryInput[i].tagOfObject;
             newDataInput[i].value.binary = BinaryInput[i].value.binary;
         }
-        for (uint8_t i = 0; i < NUMBER_OF_BINARY_OUTPUT; i++) {
-            newDataInput[NUMBER_OF_BINARY_INPUT + i].instanceOfObject = BinaryOutput[i].instanceOfObject;
-            newDataInput[NUMBER_OF_BINARY_INPUT + i].typeOfObject = BinaryOutput[i].typeOfObject;
-            newDataInput[NUMBER_OF_BINARY_INPUT + i].tagOfObject = BinaryOutput[i].tagOfObject;
-            newDataInput[NUMBER_OF_BINARY_INPUT + i].value.binary = BinaryOutput[i].value.binary;
-        }
-        for (uint8_t i = 0; i < NUMBER_OF_ANALOG_OUTPUT; i++) {
-            newDataInput[NUMBER_OF_BINARY_INPUT + NUMBER_OF_BINARY_OUTPUT + i].instanceOfObject = AnalogOutput[i].instanceOfObject;
-            newDataInput[NUMBER_OF_BINARY_INPUT + NUMBER_OF_BINARY_OUTPUT + i].typeOfObject = AnalogOutput[i].typeOfObject;
-            newDataInput[NUMBER_OF_BINARY_INPUT + NUMBER_OF_BINARY_OUTPUT + i].tagOfObject = AnalogOutput[i].tagOfObject;
-            newDataInput[NUMBER_OF_BINARY_INPUT + NUMBER_OF_BINARY_OUTPUT + i].value.analog = AnalogOutput[i].value.analog;
-        }
 
+        /* send new data to server */
         writeNewData(NUMBER_OF_INPUT, newDataInput, inputFd);
     }
 
