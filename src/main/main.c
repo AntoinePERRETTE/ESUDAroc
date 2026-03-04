@@ -108,7 +108,7 @@ int main() {
         readNewData(NUMBER_OF_OUTPUT, newDataOutput, outputFd);
 
         /* update object with new data from server*/
-        /* arry index == instance */
+        /* array index == instance */
         uint32_t instance = 0;
         for (uint8_t i = 0; i < NUMBER_OF_OUTPUT; i++) {
             switch (newDataOutput[i].typeOfObject) {
@@ -136,12 +136,6 @@ int main() {
                         Schedule[instance].value.binary = newDataOutput[i].value.binary;
                     }
 
-                    /* debug */
-                    if (newDataOutput[i].tagOfObject == REAL) {
-                        printf("(REAL) -> %f\r\n", newDataOutput[i].value.analog);
-                    } else {
-                        printf("(ENUMERATED) -> %d\r\n", newDataOutput[i].value.binary);
-                    }
                     break;
                 default:
                     break;
@@ -155,17 +149,18 @@ int main() {
         BinaryInput[2].value.binary = gpio_read_input_value(LINE_INPUT_2);
 
         /* Update output value */
+        /* Schedule[4] == Astro Calendar */
         /* Schedule[N]->PresentValue => BinaryOutput[N]->PresentValue */
         if (Schedule[0].tagOfObject == ENUMERATED) {
-            gpio_write_output_value(LINE_OUTPUT_0, Schedule[0].value.binary | BinaryOutput[0].value.binary);
+            gpio_write_output_value(LINE_OUTPUT_0, (Schedule[4].value.binary & Schedule[0].value.binary) | BinaryOutput[0].value.binary);
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         if (Schedule[1].tagOfObject == ENUMERATED) {
-            gpio_write_output_value(LINE_OUTPUT_1, Schedule[1].value.binary | BinaryOutput[1].value.binary);
+            gpio_write_output_value(LINE_OUTPUT_1, (Schedule[4].value.binary & Schedule[1].value.binary) | BinaryOutput[1].value.binary);
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         if (Schedule[2].tagOfObject == ENUMERATED) {
-            gpio_write_output_value(LINE_OUTPUT_2, Schedule[2].value.binary | BinaryOutput[2].value.binary);
+            gpio_write_output_value(LINE_OUTPUT_2, (Schedule[4].value.binary & Schedule[2].value.binary) | BinaryOutput[2].value.binary);
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         printf("\r\n------ output value ------\r\n");
