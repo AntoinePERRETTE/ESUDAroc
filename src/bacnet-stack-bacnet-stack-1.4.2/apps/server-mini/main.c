@@ -202,6 +202,7 @@ void readScheduleFrom(const int __scheduleSaveFile_fd) {
 
     uint8_t i;
     for (i = 0; i < 4; i++) {
+        printf("set schedule %d\r\n", i);
         if (1 != read(__scheduleSaveFile_fd, &instance, 1)) {
             printf("Error occured while reading schedule instance in save file %s\r\n", strerror(errno));
         }
@@ -213,7 +214,9 @@ void readScheduleFrom(const int __scheduleSaveFile_fd) {
         uint8_t index;
         for (index = 0; index < 7; index++) {
             if (Schedule_Weekly_Schedule_Set(instance, index, &week[index])) {
-                printf("Weekly schedule written !\r\n");
+                printf("day %d schedule set !\r\n", index);
+            } else {
+                printf("Unable to set new schedule !\r\n");
             }
         }
     }
@@ -223,12 +226,18 @@ void readScheduleFrom(const int __scheduleSaveFile_fd) {
 void writeScheduleTo(const int __scheduleSaveFile_fd) {
     uint8_t instance;
     for (instance = 0; instance < 4; instance++) {
-        write(__scheduleSaveFile_fd, &instance, 1);
+        if (!write(__scheduleSaveFile_fd, &instance, 1)) {
+            printf("unable to write instance\r\n");
+        }
 
         uint8_t day;
         for (day = 0; day < 7; day++) {
             BACNET_DAILY_SCHEDULE *dailyScheduleToWrite = Schedule_Weekly_Schedule(instance, day);
-            write(__scheduleSaveFile_fd, dailyScheduleToWrite, sizeof(BACNET_DAILY_SCHEDULE));
+            if (write(__scheduleSaveFile_fd, dailyScheduleToWrite, sizeof(BACNET_DAILY_SCHEDULE))) {
+                printf("schedule %d day %d written on save file !\r\n", instance, day);
+            } else {
+                printf("unable to write day %d\r\n", day);
+            }
         }
     }
 }
@@ -247,7 +256,7 @@ static void initServiceHandlers(void) {
         printf("Error occured while creating schedule save file : %s\r\n", strerror(errno));
     }
 
-    readScheduleFrom(scheduleSaveFile_fd);
+    //readScheduleFrom(scheduleSaveFile_fd);
 
     close(scheduleSaveFile_fd);
 
