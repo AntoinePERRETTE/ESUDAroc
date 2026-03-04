@@ -197,7 +197,7 @@ static object_functions_t My_Object_Table[] = {
 
 /* read every dailyschedule for each schedule, from file */
 void readScheduleFrom(const int __scheduleSaveFile_fd) {
-    BACNET_DAILY_SCHEDULE week[7] = {};
+    BACNET_DAILY_SCHEDULE week[7] = {0};
     uint8_t instance = 0;
 
     uint8_t i;
@@ -242,9 +242,9 @@ static void initServiceHandlers(void) {
     /* open file with reading and writing rights.
      * used for saving schedule on file system
      */
-    int scheduleSaveFile_fd = open(SCHEDULESAVEFILE, O_RDWR);
+    int scheduleSaveFile_fd = creat(SCHEDULESAVEFILE, O_RDONLY);
     if (-1 == scheduleSaveFile_fd) {
-        printf("Error occured while openning schedule save file : %s\r\n", strerror(errno));
+        printf("Error occured while creating schedule save file : %s\r\n", strerror(errno));
     }
 
     readScheduleFrom(scheduleSaveFile_fd);
