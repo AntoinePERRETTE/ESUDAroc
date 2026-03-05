@@ -197,6 +197,7 @@ static object_functions_t My_Object_Table[] = {
 
 /* read every dailyschedule for each schedule, from file */
 void readScheduleFrom(const int __scheduleSaveFile_fd) {
+    lseek(__scheduleSaveFile_fd, 0, SEEK_SET);
     BACNET_DAILY_SCHEDULE week[7] = {0};
     uint8_t instance = 0;
 
@@ -204,11 +205,11 @@ void readScheduleFrom(const int __scheduleSaveFile_fd) {
     for (i = 0; i < 4; i++) {
         printf("set schedule %d\r\n", i);
         if (1 != read(__scheduleSaveFile_fd, &instance, 1)) {
-            printf("Error occured while reading schedule instance in save file %s\r\n", strerror(errno));
+            printf("Error occured while reading schedule instance in save file %s : \n", strerror(errno));
         }
 
         if (-1 == read(__scheduleSaveFile_fd, week, 7*sizeof(BACNET_DAILY_SCHEDULE))) {
-            printf("Error occured while reading weekly schedule in save file %s\r\n", strerror(errno));
+            printf("Error occured while reading weekly schedule in save file %s : \n", strerror(errno));
         }
 
         uint8_t index;
@@ -224,6 +225,7 @@ void readScheduleFrom(const int __scheduleSaveFile_fd) {
 
 /* write dailyschedule for each schedule to a file */
 void writeScheduleTo(const int __scheduleSaveFile_fd) {
+    lseek(__scheduleSaveFile_fd, 0, SEEK_SET);
     uint8_t instance;
     for (instance = 0; instance < 4; instance++) {
         if (!write(__scheduleSaveFile_fd, &instance, 1)) {
@@ -254,11 +256,10 @@ static void initServiceHandlers(void) {
     int scheduleSaveFile_fd = open(SCHEDULESAVEFILE, O_RDONLY);
     if (-1 == scheduleSaveFile_fd) {
         printf("Error occured while creating schedule save file : %s\r\n", strerror(errno));
+    } else {
+        readScheduleFrom(scheduleSaveFile_fd);
+        close(scheduleSaveFile_fd);
     }
-
-    readScheduleFrom(scheduleSaveFile_fd);
-
-    close(scheduleSaveFile_fd);
 
     Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
     Schedule_Object(1)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;

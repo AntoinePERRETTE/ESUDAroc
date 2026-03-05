@@ -36,6 +36,8 @@
 #include "bacnet/basic/object/bv.h"
 #include "bacnet/basic/object/device.h"
 
+#define BACNET_EXCEPTION_SCHEDULE_SIZE 8
+
 #include "bacnet/basic/object/schedule.h"
 #include "bacnet/basic/object/trendlog.h"
 
