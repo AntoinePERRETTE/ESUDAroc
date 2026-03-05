@@ -251,12 +251,12 @@ static void initServiceHandlers(void) {
     /* open file with reading and writing rights.
      * used for saving schedule on file system
      */
-    int scheduleSaveFile_fd = creat(SCHEDULESAVEFILE, O_RDWR);
+    int scheduleSaveFile_fd = open(SCHEDULESAVEFILE, O_RDONLY);
     if (-1 == scheduleSaveFile_fd) {
         printf("Error occured while creating schedule save file : %s\r\n", strerror(errno));
     }
 
-    //readScheduleFrom(scheduleSaveFile_fd);
+    readScheduleFrom(scheduleSaveFile_fd);
 
     close(scheduleSaveFile_fd);
 
