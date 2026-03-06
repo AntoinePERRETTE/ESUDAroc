@@ -195,50 +195,122 @@ static object_functions_t My_Object_Table[] = {
         NULL }
 };
 
-/* read every dailyschedule for each schedule, from file */
+/* read every dailyschedule & start/end date for each schedule, from file */
 void readScheduleFrom(const int __scheduleSaveFile_fd) {
-    lseek(__scheduleSaveFile_fd, 0, SEEK_SET);
     BACNET_DAILY_SCHEDULE week[7] = {0};
+    BACNET_DATE start_date = {0};
+    BACNET_DATE end_date = {0};
     uint8_t instance = 0;
+    ssize_t status;
+
+    /* go to start of file */
+    lseek(__scheduleSaveFile_fd, 0, SEEK_SET);
 
     uint8_t i;
     for (i = 0; i < 4; i++) {
-        printf("set schedule %d\r\n", i);
-        if (1 != read(__scheduleSaveFile_fd, &instance, 1)) {
-            printf("Error occured while reading schedule instance in save file %s : \n", strerror(errno));
+        printf("get schedule %d\n", i);
+
+        /* get instance */
+        status = read(__scheduleSaveFile_fd, &instance, 1);
+        if (-1 == status) {
+            printf("Error occured while reading schedule instance in save file : %s\n", strerror(errno));
+            return;
+        } else if (1 != status) {
+            printf("Error occured while reading schedule instance in save file : get incorrect amount of data\n");
+            return;
         }
 
-        if (-1 == read(__scheduleSaveFile_fd, week, 7*sizeof(BACNET_DAILY_SCHEDULE))) {
-            printf("Error occured while reading weekly schedule in save file %s : \n", strerror(errno));
+        /* get start & end dates */
+        status = read(__scheduleSaveFile_fd, &start_date, sizeof(BACNET_DATE));
+        if (-1 == status) {
+            printf("Error occured while reading start date of schedule : %s\n", strerror(errno));
+            return;
+        } else if (sizeof(BACNET_DATE) != status) {
+            printf("Error occured while reading start date of schedule : get incorrect amount of data\n");
+            return;
+        }
+        status = read(__scheduleSaveFile_fd, &end_date, sizeof(BACNET_DATE));
+        if (-1 == status) {
+            printf("Error occured while reading start date of schedule : %s\n", strerror(errno));
+            return;
+        } else if (sizeof(BACNET_DATE) != status) {
+            printf("Error occured while reading end date of schedule : get incorrect amount of data\n");
+            return;
         }
 
+        /* get weekly schedule */
+        status = read(__scheduleSaveFile_fd, week, 7*sizeof(BACNET_DAILY_SCHEDULE));
+        if (-1 == status) {
+            printf("Error occured while reading weekly schedule in save file : %s\n", strerror(errno));
+            return;
+        } else if (sizeof(BACNET_DAILY_SCHEDULE) != status) {
+            printf("Error occured while reading weekly schedule in save file : get incorrect amount of data\n");
+            return;
+        }
+
+        /* set start & end dates */
+        if (Schedule_Effective_Period_Set(Schedule_Instance_To_Index(instance), &start_date, &end_date)) {
+            printf("Start & end dates set !\n");
+        } else {
+            printf("Unable to set start & end dates !\n");
+        }
+
+        /* set weekly schedule */
         uint8_t index;
         for (index = 0; index < 7; index++) {
             if (Schedule_Weekly_Schedule_Set(instance, index, &week[index])) {
-                printf("day %d schedule set !\r\n", index);
+                printf("day %d schedule set !\n", index);
             } else {
-                printf("Unable to set new schedule !\r\n");
+                printf("Unable to set new schedule !\n");
             }
         }
     }
 }
 
-/* write dailyschedule for each schedule to a file */
+/* write dailyschedule & start/end date for each schedule to a file */
 void writeScheduleTo(const int __scheduleSaveFile_fd) {
+    /* go to start of file */
     lseek(__scheduleSaveFile_fd, 0, SEEK_SET);
+
+
     uint8_t instance;
     for (instance = 0; instance < 4; instance++) {
+        /* write instance */
         if (!write(__scheduleSaveFile_fd, &instance, 1)) {
-            printf("unable to write instance\r\n");
+            printf("unable to write instance\n");
         }
 
+        /* get start & end date to write in save file */
+        BACNET_DATE start_date, end_date = {0};
+        if (!Schedule_Effective_Period(instance, &start_date, &end_date)) {
+            printf("wrong schedule instance, unable to get start & end date\n");
+        } else {
+            /* write start & end date */
+            if (write(__scheduleSaveFile_fd, &start_date, sizeof(BACNET_DATE))) {
+                printf("schedule %d start date saved !\n", instance);
+            } else {
+                printf("unable to save start date\n");
+            }
+            if (write(__scheduleSaveFile_fd, &end_date, sizeof(BACNET_DATE))) {
+                printf("schedule %d end date saved !\n", instance);
+            } else {
+                printf("unable to save end date\n");
+            }
+        }
+
+        /* write daily schedule of each day */
         uint8_t day;
         for (day = 0; day < 7; day++) {
+            /* get daily schedule */
             BACNET_DAILY_SCHEDULE *dailyScheduleToWrite = Schedule_Weekly_Schedule(instance, day);
-            if (write(__scheduleSaveFile_fd, dailyScheduleToWrite, sizeof(BACNET_DAILY_SCHEDULE))) {
-                printf("schedule %d day %d written on save file !\r\n", instance, day);
+            if (NULL == dailyScheduleToWrite) {
+                printf("unable to get daily schedule for day %d of schedule %d", day, instance);
             } else {
-                printf("unable to write day %d\r\n", day);
+                if (write(__scheduleSaveFile_fd, dailyScheduleToWrite, sizeof(BACNET_DAILY_SCHEDULE))) {
+                    printf("schedule %d day %d written on save file !\n", instance, day);
+                } else {
+                    printf("unable to write day %d\n", day);
+                }
             }
         }
     }
