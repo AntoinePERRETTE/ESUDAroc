@@ -256,10 +256,10 @@ void readScheduleFrom(const int __scheduleSaveFile_fd) {
         }
 
         /* set weekly schedule */
-        uint8_t index;
-        for (index = 0; index < 7; index++) {
-            if (Schedule_Weekly_Schedule_Set(instance, index, &week[index])) {
-                printf("day %d schedule set !\n", index);
+        uint8_t day;
+        for (day = 0; day < 7; day++) {
+            if (Schedule_Weekly_Schedule_Set(instance, day, &week[day])) {
+                printf("day %d schedule set !\n", day);
             } else {
                 printf("Unable to set new schedule !\n");
             }
