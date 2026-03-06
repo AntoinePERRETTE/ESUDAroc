@@ -238,21 +238,21 @@ void readScheduleFrom(const int __scheduleSaveFile_fd) {
             return;
         }
 
-        /* get weekly schedule */
-        status = read(__scheduleSaveFile_fd, week, 7*sizeof(BACNET_DAILY_SCHEDULE));
-        if (-1 == status) {
-            printf("Error occured while reading weekly schedule in save file : %s\n", strerror(errno));
-            return;
-        } else if (sizeof(BACNET_DAILY_SCHEDULE) != status) {
-            printf("Error occured while reading weekly schedule in save file : get incorrect amount of data\n");
-            return;
-        }
-
         /* set start & end dates */
         if (Schedule_Effective_Period_Set(Schedule_Instance_To_Index(instance), &start_date, &end_date)) {
             printf("Start & end dates set !\n");
         } else {
             printf("Unable to set start & end dates !\n");
+        }
+
+        /* get weekly schedule */
+        status = read(__scheduleSaveFile_fd, week, 7*sizeof(BACNET_DAILY_SCHEDULE));
+        if (-1 == status) {
+            printf("Error occured while reading weekly schedule in save file : %s\n", strerror(errno));
+            return;
+        } else if (7*sizeof(BACNET_DAILY_SCHEDULE) != status) {
+            printf("Error occured while reading weekly schedule in save file : get incorrect amount of data\n");
+            return;
         }
 
         /* set weekly schedule */
