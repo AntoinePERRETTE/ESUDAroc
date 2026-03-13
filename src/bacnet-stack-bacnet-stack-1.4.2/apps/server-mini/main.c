@@ -409,8 +409,8 @@ struct objectData {
 static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __objectInstance, int __fifoFd) {
     struct objectData BACnetObjectToSend = {0};
 
+    BACnetObjectToSend.instanceOfObject = __objectInstance;
     switch (__objectType) {
-        BACnetObjectToSend.instanceOfObject = __objectInstance;
         case OBJECT_SCHEDULE:
             if (BACNET_APPLICATION_TAG_ENUMERATED == Schedule_Object(__objectInstance)->Present_Value.tag) {
                 BACnetObjectToSend.typeOfObject = BINARY_SCHEDULE;
