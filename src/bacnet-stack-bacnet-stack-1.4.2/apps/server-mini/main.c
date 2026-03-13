@@ -507,7 +507,7 @@ static void sendDataToApp(int __outputFd) {
 }
 
 static void readDataFromApp(int __inputFd) {
-    if (-1 == __inputFd) {
+    if (-1 != __inputFd) {
         receiveObjectDataFromFifo(__inputFd);
         receiveObjectDataFromFifo(__inputFd);
         receiveObjectDataFromFifo(__inputFd);

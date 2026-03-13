@@ -41,7 +41,7 @@ struct objectData {
 struct {
     int nObject;
     struct objectData listOfObjectData[NUMBER_OF_OBJECTS];
-} BACnetData = {NUMBER_OF_OBJECTS, {0}};
+} BACnetData;
 
 static void getNewData(int __outputFd) {
     for (uint8_t index = 0; index < NUMBER_OF_OBJECTS; index++) {
@@ -71,45 +71,48 @@ int main() {
         exitWithError();
     }
 
-    /* get new data from server */
-    getNewData(outputFd);
+    while (1) {
+        /* get new data from server */
+        getNewData(outputFd);
 
-    for (int index = 0; index < NUMBER_OF_OBJECTS; index++) {
-        struct objectData BACnetObject = BACnetData.listOfObjectData[index];
-        switch (BACnetObject.typeOfObject) {
-            case ANALOG_SCHEDULE:
-                printf("Schedule Object %d -> %d\r\n", BACnetObject.instanceOfObject, BACnetObject.value.binary);
-                break;
-            case BINARY_SCHEDULE:
-                printf("Schedule Object %d -> %d\r\n", BACnetObject.instanceOfObject, BACnetObject.value.binary);
-                break;
-            case ANALOG_OUTPUT:
-                printf("Analog Output Object %d -> %f\r\n", BACnetObject.instanceOfObject, BACnetObject.value.analog);
-                break;
-            case BINARY_OUTPUT:
-                gpio_write_output_value(BACnetObject.instanceOfObject, BACnetObject.value.binary);
-                printf("Binary Output Object %d -> %d\r\n", BACnetObject.instanceOfObject, BACnetObject.value.binary);
-                break;
-            case ANALOG_INPUT:
-                printf("Analog Input Object %d -> %f\r\n", BACnetObject.instanceOfObject, BACnetObject.value.analog);
-                break;
-            case BINARY_INPUT:
-                bool inputValue = gpio_read_input_value(BACnetObject.instanceOfObject);
-                if (inputValue != BACnetObject.value.binary) {
-                    BACnetObject.value.binary = inputValue;
-                    BACnetObject.CoV = true;
-                } else {
-                    BACnetObject.CoV = false;
-                }
-                printf("Binary Input Object %d -> %d\r\n", BACnetObject.instanceOfObject, BACnetObject.value.binary);
-                break;
-            default:
-                break;
+        struct objectData BACnetObject = {0};
+        for (int index = 0; index < NUMBER_OF_OBJECTS; index++) {
+            BACnetObject = BACnetData.listOfObjectData[index];
+            switch (BACnetObject.typeOfObject) {
+                case ANALOG_SCHEDULE:
+                    printf("Schedule Object %d -> %f\r\n", BACnetObject.instanceOfObject, BACnetObject.value.analog);
+                    break;
+                case BINARY_SCHEDULE:
+                    printf("Schedule Object %d -> %d\r\n", BACnetObject.instanceOfObject, BACnetObject.value.binary);
+                    break;
+                case ANALOG_OUTPUT:
+                    printf("Analog Output Object %d -> %f\r\n", BACnetObject.instanceOfObject, BACnetObject.value.analog);
+                    break;
+                case BINARY_OUTPUT:
+                    gpio_write_output_value(BACnetObject.instanceOfObject, BACnetObject.value.binary);
+                    printf("Binary Output Object %d -> %d\r\n", BACnetObject.instanceOfObject, BACnetObject.value.binary);
+                    break;
+                case ANALOG_INPUT:
+                    printf("Analog Input Object %d -> %f\r\n", BACnetObject.instanceOfObject, BACnetObject.value.analog);
+                    break;
+                case BINARY_INPUT:
+                    bool inputValue = gpio_read_input_value(BACnetObject.instanceOfObject);
+                    if (inputValue != BACnetObject.value.binary) {
+                        BACnetObject.value.binary = inputValue;
+                        BACnetObject.CoV = true;
+                    } else {
+                        BACnetObject.CoV = false;
+                    }
+                    printf("Binary Input Object %d -> %d\r\n", BACnetObject.instanceOfObject, BACnetObject.value.binary);
+                    break;
+                default:
+                    break;
+            }
         }
-    }
 
-    /* send new data to server */
-    sendNewData(NUMBER_OF_OBJECTS, inputFd);
+        /* send new data to server */
+        sendNewData(NUMBER_OF_OBJECTS, inputFd);
+    }
 
     if (-1 == close(inputFd)) {
         exitWithError();
