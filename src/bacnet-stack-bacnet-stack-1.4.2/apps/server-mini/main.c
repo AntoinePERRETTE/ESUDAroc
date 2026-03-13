@@ -1,4 +1,5 @@
 #include <asm-generic/errno-base.h>
+#include <filesystem>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -55,6 +56,14 @@ static uint8_t Rx_Buf[MAX_MPDU] = { 0 };
 static BACNET_WEEKDAY actual_day;
 static BACNET_TIME actual_time;
 static struct tm calendar_time;
+
+#define NUMBER_OF_BINARY_INPUT 3
+#define NUMBER_OF_BINARY_OUTPUT 3
+#define NUMBER_OF_ANALOG_OUTPUT 3
+#define NUMBER_OF_ANALOG_INPUT 0
+#define NUMBER_OF_SCHEDULE 4
+
+#define NUMBER_OF_OBJECTS NUMBER_OF_SCHEDULE + NUMBER_OF_BINARY_INPUT + NUMBER_OF_BINARY_OUTPUT + NUMBER_OF_ANALOG_OUTPUT + NUMBER_OF_ANALOG_INPUT
 
 /* BACnet Object Instances */
 static uint32_t ao_instance[3] = {0};
@@ -384,70 +393,56 @@ static void initBacnetStack() {
     Send_I_Am(&Rx_Buf[0]);
 }
 
-struct dataPacket {
-    enum {SCHEDULE, BINARY_OUTPUT, BINARY_INPUT, ANALOG_INPUT, ANALOG_OUTPUT} typeOfObject;
-    uint32_t instanceOfObject;
-    enum {ENUMERATED, REAL} tagOfObject;
+struct objectData {
+    enum {ANALOG_SCHEDULE, BINARY_SCHEDULE, BINARY_OUTPUT, BINARY_INPUT, ANALOG_INPUT, ANALOG_OUTPUT} typeOfObject : 3;
+    int instanceOfObject : 28;
+    bool CoV : 1;
 
     union {
         bool binary;
         float analog;
     } value;
 };
+
 /**
  * @brief send data of an object through Output FIFO
  */
 static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __objectInstance, int __fifoFd) {
-    struct dataPacket dataToSend;
+    struct objectData BACnetObjectToSend = {0};
 
-    /* serialyse data */
-
-    dataToSend.instanceOfObject = __objectInstance;
     switch (__objectType) {
+        BACnetObjectToSend.instanceOfObject = __objectInstance;
         case OBJECT_SCHEDULE:
-            dataToSend.typeOfObject = SCHEDULE;
-            if (Schedule_Object(__objectInstance)->Present_Value.tag == BACNET_APPLICATION_TAG_REAL) {
-                dataToSend.tagOfObject = REAL;
-                dataToSend.value.analog = Schedule_Object(__objectInstance)->Present_Value.type.Real;
-            } else if (Schedule_Object(__objectInstance)->Present_Value.tag == BACNET_APPLICATION_TAG_ENUMERATED) {
-                dataToSend.tagOfObject = ENUMERATED;
-                dataToSend.value.binary = Schedule_Object(__objectInstance)->Present_Value.type.Enumerated;
+            if (BACNET_APPLICATION_TAG_ENUMERATED == Schedule_Object(__objectInstance)->Present_Value.tag) {
+                BACnetObjectToSend.typeOfObject = BINARY_SCHEDULE;
+                BACnetObjectToSend.value.binary = Schedule_Object(__objectInstance)->Present_Value.type.Enumerated;
+            } else {
+                BACnetObjectToSend.typeOfObject = ANALOG_SCHEDULE;
+                BACnetObjectToSend.value.analog = Schedule_Object(__objectInstance)->Present_Value.type.Real;
             }
-            break;
-        case OBJECT_ANALOG_INPUT:
-            dataToSend.typeOfObject = ANALOG_INPUT;
-            dataToSend.tagOfObject = REAL;
-            dataToSend.value.analog = Analog_Input_Present_Value(__objectInstance);
             break;
         case OBJECT_ANALOG_OUTPUT:
-            dataToSend.typeOfObject = ANALOG_OUTPUT;
-            dataToSend.tagOfObject = REAL;
-            dataToSend.value.analog = Analog_Output_Present_Value(__objectInstance);
+            BACnetObjectToSend.typeOfObject = ANALOG_OUTPUT;
+            BACnetObjectToSend.value.analog = Analog_Output_Present_Value(__objectInstance);
+            break;
+        case OBJECT_ANALOG_INPUT:
+            BACnetObjectToSend.typeOfObject = ANALOG_INPUT;
+            BACnetObjectToSend.value.analog = Analog_Input_Present_Value(__objectInstance);
             break;
         case OBJECT_BINARY_OUTPUT:
-            dataToSend.typeOfObject = BINARY_OUTPUT;
-            dataToSend.tagOfObject = ENUMERATED;
-            if(Binary_Output_Present_Value(__objectInstance) == BINARY_ACTIVE) {
-                dataToSend.value.binary = true;
-            } else {
-                dataToSend.value.binary = false;
-            }
+            BACnetObjectToSend.typeOfObject = BINARY_OUTPUT;
+            BACnetObjectToSend.value.binary = Binary_Output_Present_Value(__objectInstance);
             break;
         case OBJECT_BINARY_INPUT:
-            dataToSend.typeOfObject = BINARY_INPUT;
-            dataToSend.tagOfObject = ENUMERATED;
-            if(Binary_Input_Present_Value(__objectInstance) == BINARY_ACTIVE) {
-                dataToSend.value.binary = true;
-            } else {
-                dataToSend.value.binary = false;
-            }
+            BACnetObjectToSend.typeOfObject = BINARY_INPUT;
+            BACnetObjectToSend.value.binary = Binary_Input_Present_Value(__objectInstance);
             break;
         default:
             break;
     }
 
     /* send the datagramm */
-    if (-1 == write(__fifoFd, &dataToSend, sizeof(dataToSend))) {
+    if (-1 == write(__fifoFd, &BACnetObjectToSend, sizeof(struct objectData))) {
         printf("impossible to write to FIFO %s\r\n", strerror(errno));
     }
 }
@@ -455,12 +450,38 @@ static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __
 /**
  * @brief read data of an object through Input FIFO
  */
-static struct dataPacket receiveObjectDataFromFifo(int __fifoFd) {
-    struct dataPacket dataReceived;
-    if (-1 == read(__fifoFd, &dataReceived, sizeof(dataReceived))) {
+static void receiveObjectDataFromFifo(int __fifoFd) {
+    struct objectData receivedBACnetObject = {0};
+
+    if (-1 == read(__fifoFd, &receivedBACnetObject, sizeof(struct objectData))) {
         printf("impossible to read from FIFO %s\r\n", strerror(errno));
+        return;
     }
-    return dataReceived;
+
+    switch (receivedBACnetObject.typeOfObject) {
+        case ANALOG_SCHEDULE:
+            break;
+        case BINARY_SCHEDULE:
+            break;
+        case ANALOG_OUTPUT:
+            Analog_Output_Present_Value_Set(receivedBACnetObject.instanceOfObject, receivedBACnetObject.value.analog, BACNET_MAX_PRIORITY);
+            break;
+        case ANALOG_INPUT:
+            if (receivedBACnetObject.CoV) {
+                Analog_Input_Present_Value_Set(receivedBACnetObject.instanceOfObject, receivedBACnetObject.value.analog);
+            }
+            break;
+        case BINARY_OUTPUT:
+            Binary_Output_Present_Value_Set(receivedBACnetObject.instanceOfObject, receivedBACnetObject.value.analog, BACNET_MAX_PRIORITY);
+            break;
+        case BINARY_INPUT:
+            if (receivedBACnetObject.CoV) {
+                Analog_Input_Present_Value_Set(receivedBACnetObject.instanceOfObject, receivedBACnetObject.value.analog);
+            }
+            break;
+        default:
+            break;
+    }
 }
 
 static void sendDataToApp(int __outputFd) {
@@ -468,6 +489,10 @@ static void sendDataToApp(int __outputFd) {
         sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[0], __outputFd);
         sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[1], __outputFd);
         sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[2], __outputFd);
+
+        sendObjectDataToFifo(OBJECT_BINARY_INPUT, bi_instance[0], __outputFd);
+        sendObjectDataToFifo(OBJECT_BINARY_INPUT, bi_instance[1], __outputFd);
+        sendObjectDataToFifo(OBJECT_BINARY_INPUT, bi_instance[2], __outputFd);
 
         sendObjectDataToFifo(OBJECT_ANALOG_OUTPUT, ao_instance[0], __outputFd);
         sendObjectDataToFifo(OBJECT_ANALOG_OUTPUT, ao_instance[1], __outputFd);
@@ -484,26 +509,21 @@ static void sendDataToApp(int __outputFd) {
 
 static void readDataFromApp(int __inputFd) {
     if (-1 == __inputFd) {
+        receiveObjectDataFromFifo(__inputFd);
+        receiveObjectDataFromFifo(__inputFd);
+        receiveObjectDataFromFifo(__inputFd);
+        receiveObjectDataFromFifo(__inputFd);
+        receiveObjectDataFromFifo(__inputFd);
+        receiveObjectDataFromFifo(__inputFd);
+        receiveObjectDataFromFifo(__inputFd);
+        receiveObjectDataFromFifo(__inputFd);
+        receiveObjectDataFromFifo(__inputFd);
+        receiveObjectDataFromFifo(__inputFd);
+        receiveObjectDataFromFifo(__inputFd);
+        receiveObjectDataFromFifo(__inputFd);
+        receiveObjectDataFromFifo(__inputFd);
+    } else {
         printf("input fifo not openned !! %s\r\n", strerror(errno));
-        return;
-    }
-
-    /* TODO : Check object type & object tag validity between received data and local object */
-    uint8_t i;
-    for (i = 0; i < 3; i++) {
-        struct dataPacket newData = receiveObjectDataFromFifo(__inputFd);
-        switch (newData.typeOfObject) {
-            case BINARY_INPUT:
-                if (newData.value.binary != Binary_Input_Present_Value(newData.instanceOfObject)) {
-                    Binary_Input_Present_Value_Set(newData.instanceOfObject, (BACNET_BINARY_PV) newData.value.binary);
-                }
-                break;
-            case ANALOG_INPUT:
-                Analog_Input_Present_Value_Set(newData.instanceOfObject, newData.value.analog);
-                break;
-            default:
-                break;
-        }
     }
 }
 
