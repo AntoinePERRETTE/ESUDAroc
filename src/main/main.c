@@ -8,8 +8,10 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
+#include <time.h>
 
-#include "gestion_gpio.h"
+//#include "gestion_gpio.h"
+#include "sun.h"
 
 #define LINE_INPUT_0 0
 #define LINE_INPUT_1 2
@@ -65,6 +67,15 @@ static void writeNewData(uint8_t __nmemb, struct dataPacket __newData[__nmemb], 
 }
 
 int main() {
+    /* Get dawn & dusk hour of the sun */
+    struct sunData sun = compute_sunData();
+    double hourOfDawn = sun.dawn;
+    double hourOfDusk = sun.dusk;
+    bool isDuskPass = 0;
+
+    printf("Dawn at : %f\r\n", hourOfDawn);
+    printf("Dusk at : %f\r\n", hourOfDusk);
+
     int inputFd = -1;
     int outputFd = -1;
     if (-1 == (outputFd = open(OUTPUT_FIFO_PATH, O_RDONLY))) {
@@ -102,7 +113,30 @@ int main() {
     Schedule[2].typeOfObject = SCHEDULE;
     Schedule[3].typeOfObject = SCHEDULE;
 
+    time_t now = 0;
+    struct tm* localTime = NULL;
+
     while(1) {
+        /* get actual time */
+        /* compare with Dawn & Dusk */
+        now = time(NULL);
+        localTime = localtime(&now);
+
+        /* is Dawn pass? or Dusk? */
+        if (localTime->tm_hour > hourOfDawn) {
+            isDuskPass = 0;
+        } else if (localTime->tm_hour > hourOfDusk) {
+            isDuskPass = 1;
+        }
+        if (localTime->tm_hour > 23 && localTime->tm_min > 59 && localTime->tm_sec > 50) {
+            /* wait 20 sec */
+            while(now-time(NULL) < 20000);
+            sun = compute_sunData();
+            hourOfDawn = sun.dawn;
+            hourOfDusk = sun.dusk;
+        }
+
+
         printf("\r\n------ Received new data from the server ------\r\n");
         /* get newData for output object */
         readNewData(NUMBER_OF_OUTPUT, newDataOutput, outputFd);
@@ -142,26 +176,34 @@ int main() {
             }
         }
 
-        /* Update Value*/
-        /* read data from gpio */
-        BinaryInput[0].value.binary = gpio_read_input_value(LINE_INPUT_0);
-        BinaryInput[1].value.binary = gpio_read_input_value(LINE_INPUT_1);
-        BinaryInput[2].value.binary = gpio_read_input_value(LINE_INPUT_2);
+        /* Uncomment to read data from gpio */
 
-        /* Update output value */
-        /* Schedule[4] == Astro Calendar */
+        // BinaryInput[0].value.binary = gpio_read_input_value(LINE_INPUT_0);
+        // BinaryInput[1].value.binary = gpio_read_input_value(LINE_INPUT_1);
+        // BinaryInput[2].value.binary = gpio_read_input_value(LINE_INPUT_2);
+
+        // for testing purpose
+        BinaryInput[0].value.binary ^= 1;
+        BinaryInput[1].value.binary ^= 1;
+        BinaryInput[2].value.binary ^= 1;
+
+
+        /* Uncomment to manipulate GPIO */
+
         /* Schedule[N]->PresentValue => BinaryOutput[N]->PresentValue */
-        if (Schedule[0].tagOfObject == ENUMERATED) {
-            gpio_write_output_value(LINE_OUTPUT_0, (Schedule[3].value.binary & Schedule[0].value.binary) | BinaryOutput[0].value.binary);
-        } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        /* output set only if Dawn not passed -> it's Dusk -> lamp can be set on*/
 
-        if (Schedule[1].tagOfObject == ENUMERATED) {
-            gpio_write_output_value(LINE_OUTPUT_1, (Schedule[3].value.binary & Schedule[1].value.binary) | BinaryOutput[1].value.binary);
-        } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        // if (Schedule[0].tagOfObject == ENUMERATED) {
+        //     gpio_write_output_value(LINE_OUTPUT_0, (Schedule[3].value.binary & isDuskPass) | BinaryOutput[0].value.binary);
+        // } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
-        if (Schedule[2].tagOfObject == ENUMERATED) {
-            gpio_write_output_value(LINE_OUTPUT_2, (Schedule[3].value.binary & Schedule[2].value.binary) | BinaryOutput[2].value.binary);
-        } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        // if (Schedule[1].tagOfObject == ENUMERATED) {
+        //     gpio_write_output_value(LINE_OUTPUT_1, (Schedule[3].value.binary & isDuskPass)) | BinaryOutput[1].value.binary);
+        // } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+
+        // if (Schedule[2].tagOfObject == ENUMERATED) {
+        //     gpio_write_output_value(LINE_OUTPUT_2, (Schedule[3].value.binary & isDuskPass) | BinaryOutput[2].value.binary);
+        // } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         printf("\r\n------ output value ------\r\n");
         printf("Binary Output Object %d -> %d\r\n", BinaryOutput[0].instanceOfObject, BinaryOutput[0].value.binary);
@@ -181,6 +223,10 @@ int main() {
         printf("Binary Input Object %d -> %d\r\n", BinaryInput[0].instanceOfObject, BinaryInput[0].value.binary);
         printf("Binary Input Object %d -> %d\r\n", BinaryInput[1].instanceOfObject, BinaryInput[1].value.binary);
         printf("Binary Input Object %d -> %d\r\n", BinaryInput[2].instanceOfObject, BinaryInput[2].value.binary);
+
+        printf("\r\n------  is Dusk passed ?  -------\r\n");
+        if (isDuskPass) printf("Yes !\r\n");
+        else printf("No !\r\n");
 
         /* prepare new data for server */
         for (uint8_t i = 0; i < NUMBER_OF_BINARY_INPUT; i++) {
