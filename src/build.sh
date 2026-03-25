@@ -8,6 +8,7 @@ echo "copying BACnet server into bin\r\n"
 cp bin/bacmini ../bin/
 cd ..
 
+echo "\r\n#######################################################\n\r\n"
 echo "building app\r\n"
 cd main
 gcc -Wall -Wextra -Werror -c gestion_gpio.c
