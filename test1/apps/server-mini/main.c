@@ -315,16 +315,22 @@ static void Init_Service_Handlers(void)
     BACNET_DATE end_date = { 2030, 1, 1, 1 };
 
     Schedule_Effective_Period_Set(Schedule_Instance_To_Index(0), &start_date, &end_date);
-    Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
+    Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_REAL;
+    Schedule_Object(0)->Present_Value.type.Real = 50.0f;
 
     BACNET_TIME time = {9, 15, 15, 0};
     BACNET_DAILY_SCHEDULE Daily_Schedule;
     Daily_Schedule.Time_Values[0].Time = time;
+    Daily_Schedule.Time_Values[0].Value.tag = BACNET_APPLICATION_TAG_REAL;
+    Daily_Schedule.Time_Values[0].Value.type.Real = 2.4f;
     Daily_Schedule.TV_Count = 1;
-    BACNET_CALENDAR_ENTRY date1 = {0, {2025, 1, 1, 1}, NULL};
+    BACNET_CALENDAR_ENTRY date1 = {BACNET_CALENDAR_DATE, {2025, 1, 1, 1}, NULL};
     BACNET_SPECIAL_EVENT event1 = {BACNET_SPECIAL_EVENT_PERIOD_CALENDAR_ENTRY, date1, Daily_Schedule, BACNET_MAX_PRIORITY};
-    if (Schedule_Exception_Schedule_Set(0, 1, &event1)) {
-        printf("Exception schedule set!\r\n");
+    uint8_t i = 0;
+    for (; i < 7; i++) {
+        if (Schedule_Exception_Schedule_Set(0, i, &event1)) {
+            printf("Exception schedule n°%d set!\r\n", i);
+        }
     }
 
     /*
