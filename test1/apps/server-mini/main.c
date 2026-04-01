@@ -37,6 +37,7 @@
 #include "bacnet/basic/object/bv.h"
 #include "bacnet/basic/object/device.h"
 #include "bacnet/basic/service/h_create_object.h"
+#include "bacnet/basic/service/h_rr.h"
 #include "bacnet/calendar_entry.h"
 #include "bacnet/dailyschedule.h"
 #include "bacnet/special_event.h"
@@ -381,7 +382,7 @@ static void Init_Service_Handlers(void)
             SERVICE_CONFIRMED_READ_PROPERTY, handler_read_property);
     apdu_set_confirmed_handler(
             SERVICE_CONFIRMED_WRITE_PROPERTY, handler_write_property);
-    apdu_set_confirmed_handler(SERVICE_CONFIRMED_CREATE_OBJECT, handler_create_object);
+    apdu_set_confirmed_handler(SERVICE_CONFIRMED_READ_RANGE, handler_read_range);
     apdu_set_unrecognized_service_handler_handler(handler_unrecognized_service);
 }
 
