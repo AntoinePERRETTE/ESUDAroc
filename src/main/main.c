@@ -230,6 +230,8 @@ int main() {
         printf("Binary Input Object %d -> %d\r\n", BinaryInput[2].instanceOfObject, BinaryInput[2].value.binary);
 
         printf("\r\n------  is Dusk passed ?  -------\r\n");
+        printf("Dawn at : %f\r\n", hourOfDawn);
+        printf("Dusk at : %f\r\n", hourOfDusk);
         if (isDuskPass) printf("Yes !\r\n");
         else printf("No !\r\n");
 
