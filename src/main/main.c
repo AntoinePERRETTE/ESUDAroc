@@ -130,7 +130,7 @@ int main() {
         }
         if (localTime->tm_hour > 23 && localTime->tm_min > 59 && localTime->tm_sec > 50) {
             /* wait 20 sec */
-            while(now-time(NULL) < 20000);
+            while(time(NULL)-now < 20000);
             sun = compute_sunData();
             hourOfDawn = sun.dawn;
             hourOfDusk = sun.dusk;
