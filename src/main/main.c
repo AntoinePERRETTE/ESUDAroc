@@ -76,6 +76,8 @@ int main() {
     printf("Dawn at : %f\r\n", hourOfDawn);
     printf("Dusk at : %f\r\n", hourOfDusk);
 
+    printf("Binary Object n°X will be linked to GPIO n°X\r\nAnalog Object are linked to nothing\r\nSchedule object are linked to nothing\r\n");
+
     int inputFd = -1;
     int outputFd = -1;
     if (-1 == (outputFd = open(OUTPUT_FIFO_PATH, O_RDONLY))) {
@@ -130,6 +132,7 @@ int main() {
             isDuskPass = 1;
         }
         if (localTime->tm_hour >= 23 && localTime->tm_min >= 59 && localTime->tm_sec >= 50) {
+            now = time(NULL);
             /* wait 20 sec */
             while(time(NULL)-now < 20000);
             sun = compute_sunData();
