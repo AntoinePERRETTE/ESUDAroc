@@ -1,0 +1,1239 @@
+[
+    {
+        "id": "316db15f9c352dcf",
+        "type": "tab",
+        "label": "yacine Essais bacnet-js",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "736b56700ddf9f34",
+        "type": "group",
+        "z": "316db15f9c352dcf",
+        "name": "ExeptionSchedule",
+        "style": {
+            "fill": "#ffffbf",
+            "label": true,
+            "label-position": "n",
+            "color": "#000000"
+        },
+        "nodes": [
+            "65b1e2b8034fb61c",
+            "3eeec807e3240ddb",
+            "dde6713531abb3a4",
+            "972be14c7b82941e",
+            "805f9309c921d3aa",
+            "d21e608942f20c67"
+        ],
+        "x": 124,
+        "y": 419,
+        "w": 702,
+        "h": 122
+    },
+    {
+        "id": "deb50a8435a0662f",
+        "type": "group",
+        "z": "316db15f9c352dcf",
+        "name": "Schedule",
+        "style": {
+            "fill": "#ffffbf",
+            "label": true,
+            "label-position": "n",
+            "color": "#000000"
+        },
+        "nodes": [
+            "38f172de26b05823",
+            "7de9cf78ac064daf",
+            "26f7c7d0e954c892",
+            "3f11f1684b94eed0",
+            "e1e2fdb55ef200e9",
+            "8071beae78ec3e34",
+            "1462c5de40e71af7",
+            "1b82ca7f5a1b60fc",
+            "6e3034465e14e273"
+        ],
+        "x": 114,
+        "y": 179,
+        "w": 772,
+        "h": 202
+    },
+    {
+        "id": "38f172de26b05823",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "g": "deb50a8435a0662f",
+        "name": "bacnet_client_scheduleRead",
+        "func": "let client =  new bacnet.default({ apduTimeout: 10000 , broadcastAddress: flow.get('ipBroadcast')});       \n\nif (!client) {\n    client.on('error', (err) => node.error('Erreur client: ' + err.message));\n}\n\nclient.on('error', (err) => {\n    node.error('Erreur client: ' + err.message);\n    client.close();\n});\n\nconst address = { address:flow.get('ip')+\":\"+flow.get('port')};\n\nasync function main() {\n    try {\n        const value = await client.readProperty(\n            address,\n            { type: bacnet.ObjectType.SCHEDULE, instance: 1 },\n            bacnet.PropertyIdentifier.WEEKLY_SCHEDULE\n        );\n\n        const weekly = (value.values[0]?.value) || [];\n        \n        const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];\n        \n        const result = {};\n        weekly.forEach((day, index) => {\n            result[days[index]] = day;\n        });\n\n        node.warn(JSON.stringify(result, null, 2));\n        node.send({ payload: result });\n\n    } catch (err) {\n        node.error('Erreur: ' + JSON.stringify(err, Object.getOwnPropertyNames(err)));\n    } finally {\n\n    }\n}\n\nmain();\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "bacnet",
+                "module": "@bacnet-js/client"
+            }
+        ],
+        "x": 460,
+        "y": 220,
+        "wires": [
+            [
+                "7de9cf78ac064daf"
+            ]
+        ]
+    },
+    {
+        "id": "7de9cf78ac064daf",
+        "type": "debug",
+        "z": "316db15f9c352dcf",
+        "g": "deb50a8435a0662f",
+        "name": "debug scheduleRead",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 740,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "65b1e2b8034fb61c",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "g": "736b56700ddf9f34",
+        "name": "bacnet_client_ExceptionRead",
+        "func": "const client = new bacnet.default({ apduTimeout: 10000 , broadcastAddress: flow.get('ipBroadcast')});       \n\nclient.on('error', (err) => {\n    node.error('Erreur client: ' + err.message);\n    client.close();\n});\n\nconst address = { address:flow.get('ip')+\":\"+flow.get('port')};\n\nasync function main() {\n    try {\n        const value = await client.readProperty(\n            address,\n            { type: bacnet.ObjectType.SCHEDULE, instance: 0 },\n            bacnet.PropertyIdentifier.EXCEPTION_SCHEDULE\n        );\n\n        node.warn('RAW VALUE: ' + JSON.stringify(value, null, 2));\n\n        const exceptions = (value.values[0]?.value) || [];\n\n        const result = exceptions.map((specialEvent, index) => {\n            // Inspecter chaque événement brut\n\n            // La structure peut être à un niveau différent selon le device/lib\n            const raw = specialEvent?.value ?? specialEvent;\n            const period = raw?.period ?? raw?.calendarEntry ?? raw;\n            const timeValues = (raw?.listOfTimeValues || raw?.timeValues || []).map(tv => ({\n                time: tv?.time,\n                value: tv?.value\n            }));\n            node.warn(raw);\n            return {\n                index,\n                raw,\n                period,\n                timeValues,\n                priority: raw?.eventPriority ?? raw?.priority\n            };\n\n        });\n\n        node.send({ payload: result });\n\n    } catch (err) {\n        node.error('Erreur: ' + JSON.stringify(err, Object.getOwnPropertyNames(err)));\n    } finally {\n        client.close();\n    }\n}\n\nmain();\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "bacnet",
+                "module": "@bacnet-js/client"
+            }
+        ],
+        "x": 410,
+        "y": 460,
+        "wires": [
+            [
+                "3eeec807e3240ddb"
+            ]
+        ]
+    },
+    {
+        "id": "3eeec807e3240ddb",
+        "type": "debug",
+        "z": "316db15f9c352dcf",
+        "g": "736b56700ddf9f34",
+        "name": "debug exeptionRead",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 680,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "26f7c7d0e954c892",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "g": "deb50a8435a0662f",
+        "name": "bacnet_client_scheduleWrite",
+        "func": "const client = new bacnet.default({ apduTimeout: 10000, broadcastAddress: flow.get('ipBroadcast') });       \n\nclient.on('error', (err) => {\n    node.error('Erreur client: ' + err.message);\n    client.close();\n});\n\nconst address = { address:flow.get('ip') + \":\" + flow.get('port') };\n\n// Helper pour créer un objet Date avec l'heure souhaitée\nfunction makeTime(hour, minute) {\n    const d = new Date();\n    d.setHours(hour, minute, 0, 0);\n    return d;\n}\n\nconst weeklySchedule = [\n    // Lundi\n    [\n        { time: makeTime(6, 0), value: { type: 4, value: 21.0 } },\n        { time: makeTime(22, 0), value: { type: 4, value: 19.0 } },\n    ],\n    // Mardi\n    [\n        { time: makeTime(6, 0), value: { type: 4, value: 21.0 } },\n        { time: makeTime(22, 0), value: { type: 4, value: 19.0 } },\n    ],\n    // Mercredi\n    [\n        { time: makeTime(6, 0), value: { type: 4, value: 21.0 } },\n        { time: makeTime(22, 0), value: { type: 4, value: 19.0 } },\n    ],\n    // Jeudi\n    [\n        { time: makeTime(6, 0), value: { type: 4, value: 21.0 } },\n        { time: makeTime(22, 0), value: { type: 4, value: 19.0 } },\n    ],\n    // Vendredi\n    [\n        { time: makeTime(6, 0), value: { type: 4, value: 21.0 } },\n        { time: makeTime(22, 0), value: { type: 4, value: 19.0 } },\n    ],\n    // Samedi\n    [],\n    // Dimanche\n    [],\n];\n\nasync function main() {\n    try {\n        await client.writeProperty(\n            address,\n            { type: bacnet.ObjectType.SCHEDULE, instance: 1 },\n            bacnet.PropertyIdentifier.WEEKLY_SCHEDULE,\n            weeklySchedule,\n            { priority: 16 }\n        );\n\n        node.warn('Écriture WEEKLY_SCHEDULE réussie');\n        node.send({ payload: 'OK' });\n\n    } catch (err) {\n        node.error('Erreur: ' + JSON.stringify(err, Object.getOwnPropertyNames(err)));\n    } finally {\n        client.close();\n    }\n}\n\nmain();\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "bacnet",
+                "module": "@bacnet-js/client"
+            }
+        ],
+        "x": 460,
+        "y": 260,
+        "wires": [
+            [
+                "3f11f1684b94eed0"
+            ]
+        ]
+    },
+    {
+        "id": "3f11f1684b94eed0",
+        "type": "debug",
+        "z": "316db15f9c352dcf",
+        "g": "deb50a8435a0662f",
+        "name": "debug scheduleWrite",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 740,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "dde6713531abb3a4",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "g": "736b56700ddf9f34",
+        "name": "bacnet_client_ExceptionWrite",
+        "func": "const client = new bacnet.default({\n    apduTimeout: 5000,\n    interface: '0.0.0.0',\n    port: 47811\n});\n\nconst targetIp = '192.168.140.24';\nconst target = { address: targetIp, net: 0, port: 47808 };\n\n// ── Schedule 0 ──────────────────────────────────────────\n// ── Schedule 0 ──────────────────────────────────────────\nconst exceptionSchedule0 = [{\n    date: {\n        type: 10, // 10 = Date (format BACnet)\n        // Date d'aujourd'hui : 2 Avril 2026\n        // year = 2026 - 1900 = 126, month = 4 (Avril), day = 2\n        value: { year: 126, month: 11, day: 2, wday: 255 }\n    },\n    events: [\n        {\n            // Date JS : le mois 3 correspond à Avril !\n            // Heure : 10h48 et 0 seconde\n            time: new Date(2026, 3, 2, 13, 3, 0),\n            value: { type: 4, value: 10.0 } // PV = 10.0\n        }\n    ],\n    priority: 16 // Toujours garder la priorité interne (1-16)\n} , {\n    date: {\n        type: 10, // 10 = Date (format BACnet)\n        // Date d'aujourd'hui : 2 Avril 2026\n        // year = 2026 - 1900 = 126, month = 4 (Avril), day = 2\n        value: { year: 126, month: 2, day: 2, wday: 255 }\n    },\n    events: [\n        {\n            // Date JS : le mois 3 correspond à Avril !\n            // Heure : 10h48 et 0 seconde\n            time: new Date(2026, 3, 2, 13, 3, 0),\n            value: { type: 4, value: 20.0 } // PV = 10.0\n        }\n    ],\n    priority: 16 // Toujours garder la priorité interne (1-16)\n}, {\n    date: {\n        type: 10, // 10 = Date (format BACnet)\n        // Date d'aujourd'hui : 2 Avril 2026\n        // year = 2026 - 1900 = 126, month = 4 (Avril), day = 2\n        value: { year: 126, month: 3, day: 2, wday: 255 }\n    },\n    events: [\n        {\n            // Date JS : le mois 3 correspond à Avril !\n            // Heure : 10h48 et 0 seconde\n            time: new Date(2026, 3, 2, 13, 3, 0),\n            value: { type: 4, value: 30.0 } // PV = 10.0\n        }\n    ],\n    priority: 16 // Toujours garder la priorité interne (1-16)\n} ,{\n    date: {\n        type: 10, // 10 = Date (format BACnet)\n        // Date d'aujourd'hui : 2 Avril 2026\n        // year = 2026 - 1900 = 126, month = 4 (Avril), day = 2\n        value: { year: 126, month: 4, day: 2, wday: 255 }\n    },\n    events: [\n        {\n            // Date JS : le mois 3 correspond à Avril !\n            // Heure : 10h48 et 0 seconde\n            time: new Date(2026, 3, 2, 13, 3, 0),\n            value: { type: 4, value: 40.0 } // PV = 10.0\n        }\n    ],\n    priority: 16 // Toujours garder la priorité interne (1-16)\n}];\n\n\nasync function main() {\n    try {\n        // Écriture Schedule 0\n        await client.writeProperty(\n            target,\n            { type: 17, instance: 0 },  // Schedule 0\n            38, // 38 = Exception_Schedule\n            exceptionSchedule0,\n            { priority: 16 } // Priorité de la commande d'écriture\n        );\n        node.warn('✅ Schedule 0 envoyé');\n\n    } catch (err) {\n        node.error('❌ Erreur : ' + err.message);\n    } finally {\n        setTimeout(() => { client.close(); }, 1000);\n    }\n}\n\nmain();\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "bacnet",
+                "module": "@bacnet-js/client"
+            }
+        ],
+        "x": 410,
+        "y": 500,
+        "wires": [
+            [
+                "972be14c7b82941e"
+            ]
+        ]
+    },
+    {
+        "id": "972be14c7b82941e",
+        "type": "debug",
+        "z": "316db15f9c352dcf",
+        "g": "736b56700ddf9f34",
+        "name": "debug exeptionWrite",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 680,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "12dc751ccaad6c30",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "name": "bacnet_client_analogueRead",
+        "func": "const client = new bacnet.default({ apduTimeout: 10000 , broadcastAddress: flow.get('ipBroadcast')});  \n\nclient.on('error', (err) => {\n    node.error('Erreur client: ' + err.message);\n    client.close();\n});\n\nconst address ={address:flow.get('ip')+\":\"+flow.get('port')};\n\nasync function main() {\n    try {\n        const value = await client.readProperty(\n            address,\n            { type: bacnet.ObjectType.ANALOG_INPUT, instance: 0 },\n            bacnet.PropertyIdentifier.PRESENT_VALUE\n        );\n\n        const result = {\n            object: 'analog-value',\n            instance:0,\n            value: value.values[0]?.value\n        };\n\n        node.warn(JSON.stringify(result, null, 2));\n        node.send({ payload: result });\n\n    } catch (err) {\n        node.error('Erreur: ' + JSON.stringify(err, Object.getOwnPropertyNames(err)));\n    }\n}\n\nmain();\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "bacnet",
+                "module": "@bacnet-js/client"
+            }
+        ],
+        "x": 400,
+        "y": 100,
+        "wires": [
+            [
+                "70d62129e035ced9"
+            ]
+        ]
+    },
+    {
+        "id": "70d62129e035ced9",
+        "type": "debug",
+        "z": "316db15f9c352dcf",
+        "name": "debug analogRead",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 670,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "c171fb37ed1c918d",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "name": "TO CONFIGURE",
+        "func": "flow.set('ip', \"192.168.140.24\");\nflow.set('port', \"47808\");\nflow.set('ipBroadcast', \"192.168.141.255\");\nflow.set('sourcePort',\"48809\");\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 40,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a48167232c717e37",
+        "type": "inject",
+        "z": "316db15f9c352dcf",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "true",
+        "payloadType": "bool",
+        "x": 185,
+        "y": 40,
+        "wires": [
+            [
+                "c171fb37ed1c918d"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "9ea46a6e9356cc8a",
+        "type": "inject",
+        "z": "316db15f9c352dcf",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "true",
+        "payloadType": "bool",
+        "x": 185,
+        "y": 100,
+        "wires": [
+            [
+                "12dc751ccaad6c30"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "e1e2fdb55ef200e9",
+        "type": "inject",
+        "z": "316db15f9c352dcf",
+        "g": "deb50a8435a0662f",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "true",
+        "payloadType": "bool",
+        "x": 245,
+        "y": 220,
+        "wires": [
+            [
+                "38f172de26b05823"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "805f9309c921d3aa",
+        "type": "inject",
+        "z": "316db15f9c352dcf",
+        "g": "736b56700ddf9f34",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "true",
+        "payloadType": "bool",
+        "x": 185,
+        "y": 460,
+        "wires": [
+            [
+                "65b1e2b8034fb61c"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "8071beae78ec3e34",
+        "type": "inject",
+        "z": "316db15f9c352dcf",
+        "g": "deb50a8435a0662f",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "true",
+        "payloadType": "bool",
+        "x": 245,
+        "y": 260,
+        "wires": [
+            [
+                "26f7c7d0e954c892"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "d21e608942f20c67",
+        "type": "inject",
+        "z": "316db15f9c352dcf",
+        "g": "736b56700ddf9f34",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "true",
+        "payloadType": "bool",
+        "x": 185,
+        "y": 500,
+        "wires": [
+            [
+                "dde6713531abb3a4"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "65607bdbf545e52f",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "name": "bacnet_client_MultipleWrite",
+        "func": "const client = new bacnet.default({ apduTimeout: 10000, broadcastAddress: flow.get('ipBroadcast') });\n\n\nclient.on('error', (err) => {\n    node.error('Erreur client: ' + err.message);\n    client.close();\n});\n\nconst address = flow.get('ip') + \":\" + flow.get('port');\nconst request =\n{\n    objectId: {\n        type: bacnet.ObjectType.ANALOG_VALUE,\n        instance: 10\n    },\n    values: [\n        {\n            property: {\n                id: bacnet.PropertyIdentifier.PRESENT_VALUE, index : 10\n            },\n            value:\n                [\n                    {\n                        type: 4, /*bacnet.ApplicationTag.REAL*/\n                        value: 29\n                    }\n                ],\n            priority: 16\n        }\n    ]\n};\nasync function main() {\n    try {\n\n       \n        \n       \n        await client.writePropertyMultiple\n        (\n            address,\n           request\n        );\n        node.warn(request);\n        node.warn('Écriture EXCEPTION_SCHEDULE réussie');\n        node.send({ payload: 'OK' });\n    } catch (err) {\n        node.error('Exception: ' + JSON.stringify(err, Object.getOwnPropertyNames(err)));\n        client.close();\n    }\n    finally {\n        client.close();\n    }\n}\nnode.warn(\"start multipleWrite\");\nmain();\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "bacnet",
+                "module": "@bacnet-js/client"
+            }
+        ],
+        "x": 400,
+        "y": 580,
+        "wires": [
+            [
+                "cd70a344840ca9e7"
+            ]
+        ]
+    },
+    {
+        "id": "cd70a344840ca9e7",
+        "type": "debug",
+        "z": "316db15f9c352dcf",
+        "name": "debug multipleWrite",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 670,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "224be245068dc408",
+        "type": "inject",
+        "z": "316db15f9c352dcf",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "true",
+        "payloadType": "bool",
+        "x": 185,
+        "y": 580,
+        "wires": [
+            [
+                "65607bdbf545e52f"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "533211a03d11ebe7",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "name": "build service choice",
+        "func": "flow.set('serviceChoice', msg.payload);",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 510,
+        "y": 800,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "26d66ef2655c3148",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "name": "build port",
+        "func": "flow.set('portDest', msg.payload);\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// Le code ajouté ici sera exécuté une fois\n// à chaque démarrage du noeud",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 720,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c9d8b4e450a7283d",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "name": "build ip ",
+        "func": "flow.set('ip', msg.payload);\n\nfunction getBroadcastAddress(ip, mask) {\n    const isValid = str => str.split('.').every(n => n >= 0 && n <= 255);\n\n    if (!isValid(ip) || !isValid(mask)) {\n        throw new Error(\"IP ou masque invalide\");\n    }\n\n    const ipParts = ip.split('.').map(Number);\n    const maskParts = mask.split('.').map(Number);\n\n    return ipParts.map((ipPart, i) =>\n        (ipPart & maskParts[i]) | (~maskParts[i] & 255)\n    ).join('.');\n}\n\nconst ipBroadcast = getBroadcastAddress(msg.payload,\"255.255.255.000\");\nflow.set('ipBroadcast', ipBroadcast);\n\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 680,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "8a4d1281b60ad11f",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "name": "build target object type",
+        "func": "flow.set('objectType', msg.payload);",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// Le code ajouté ici sera exécuté une fois\n// à chaque démarrage du noeud.\nflow.set('objectType',-1);",
+        "finalize": "",
+        "libs": [],
+        "x": 520,
+        "y": 840,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "16cb8d3a99ed896e",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "name": "build target instance(s)",
+        "func": "flow.set('targetInstances', msg.payload);",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// Le code ajouté ici sera exécuté une fois\n// à chaque démarrage du noeud.\nflow.set('targetInstances', -1);",
+        "finalize": "",
+        "libs": [],
+        "x": 520,
+        "y": 880,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "589ec8208e36a4ef",
+        "type": "inject",
+        "z": "316db15f9c352dcf",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "ip",
+        "payloadType": "flow",
+        "x": 185,
+        "y": 620,
+        "wires": [
+            [
+                "737d7014a2e4f706"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "737d7014a2e4f706",
+        "type": "debug",
+        "z": "316db15f9c352dcf",
+        "name": "debug ",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 630,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "96104e8f7c51a6bc",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "name": "execute service",
+        "func": "let client = new bacnet.default({\n    apduTimeout: 2000,\n    broadcastAddress: flow.get('ipBroadcast'),\n    port: 47808,\n});\n\n/* clear console*/\nmsg.payload = [];\nnode.send(msg);\nclient.on('error', (err) => {\n    node.error('Erreur client: ' + err.message);\n    client.close();\n});\n\nlet address;\n\nlet objectType = flow.get('objectType');\nswitch (objectType) {\n    case \"ANALOG_VALUE\":\n        objectType = bacnet.ObjectType.ANALOG_VALUE;\n        break;\n    case \"ANALOG_INPUT\":\n        objectType = bacnet.ObjectType.ANALOG_INPUT;\n        break;\n    case \"ANALOG_OUTPUT\":\n        objectType = bacnet.ObjectType.ANALOG_OUTPUT;\n        break;\n    case \"BINARY_VALUE\":\n        objectType = bacnet.ObjectType.BINARY_VALUE;\n        break;\n    case \"BINARY_INPUT\":\n        objectType = bacnet.ObjectType.BINARY_INPUT;\n        break;\n    case \"BINARY_OUTPUT\":\n        objectType = bacnet.ObjectType.BINARY_OUTPUT;\n        break;\n}\n\nconst targetInstances = flow.get('targetInstances');\nconst targetInstancesString = JSON.stringify(targetInstances, null, 2);\nlet targetInstancesArray = new Array();\nlet j = 0;\n/*this is abominable, but it works*/\nfor (let i = 0; i < targetInstancesString.length; i++) {\n    targetInstancesArray[i] = 0;\n}\nfor (let i = 1; i < targetInstancesString.length - 1; i++) {\n    if ((targetInstancesString[i]) === ',') {\n        j++;\n    } else {\n        targetInstancesArray[j] *= 10;\n        targetInstancesArray[j] += Number(targetInstancesString[i]);\n    }\n}\n\nconst serviceChoice = flow.get('serviceChoice');\n\nlet inputValue = flow.get('inputValue');\n\nlet bacnetValue;\nif (typeof inputValue === \"boolean\") {\n    bacnetValue = {\n        type: bacnet.ApplicationTag.BOOLEAN,\n        value: inputValue\n    };\n} else if (!isNaN(inputValue)) {\n    bacnetValue = {\n        type: bacnet.ApplicationTag.REAL,\n        value: Number(inputValue)\n    };\n}\n\nlet results = [];\ntry {\n    switch (serviceChoice) {\n        /*READ*/\n        case \"serviceRead\":\n            address = {\n                address: flow.get('ip') + \":\" + flow.get('portDest'),\n            };\n            for (let i = 0; i <= j; i++) {\n                const instance = targetInstancesArray[i];\n                const value = await client.readProperty(\n                    address, {\n                        type: objectType,\n                        instance: instance\n                    },\n                    bacnet.PropertyIdentifier.PRESENT_VALUE\n                );\n                let result = {\n                    object: objectType,\n                    instance: instance,\n                    value: value.values[0].value\n                };\n\n                msg.payload = result;\n                results.push(result);\n                node.send(msg);\n            }\n            if(j > 0){\n                msg.payload ={status : \"✅ multiple read sucessful\"} ;\n            }\n            else{\n                msg.payload ={status :\"✅ read sucessful\"} ;\n            }\n\n            node.send(msg);\n         \n        break;\n            /*WRITE*/\n        case \"serviceWrite\":\n            address = {\n                address: flow.get('ip') + \":\" + flow.get('portDest'),\n            };\n            if (j > 0) {\n                /* multiple write */\n                const requestArray = [];\n                for (let i = 0; i <= j; i++) {\n                    const instance = targetInstancesArray[i];\n                    requestArray.push({\n                        objectId: {\n                            type: objectType,\n                            instance: instance\n                        },\n                        values: [{\n                            property: {\n                                id: bacnet.PropertyIdentifier.PRESENT_VALUE\n                            },\n                            value: [{\n                                type: bacnetValue.type,\n                                value: bacnetValue.value\n                            }],\n                            priority: 8\n                        }]\n                    });\n                }\n\n                await client.writePropertyMultiple(\n                    address,\n                    requestArray\n                );\n\n\n\n                msg.payload = { status: \"✅ multiple write sucessful\"};\n                node.send(msg);\n            }\n            /* single write*/\n            else {\n\n                const instance = targetInstancesArray[0];\n                await client.writeProperty(\n                    address, {\n                        type: objectType,\n                        instance: instance\n                    },\n                    bacnet.PropertyIdentifier.PRESENT_VALUE,\n                    [{\n                        type: bacnetValue.type,\n                        value: bacnetValue.value\n                    }], {\n                        priority: 8\n                    }\n                );\n                let result = {\n                    object: objectType,\n                    instance: instance,\n                    writtenValue: inputValue\n                };\n                results.push(result);\n                node.send(msg);\n                msg.payload = { status: \"✅ write sucessful\" };\n                node.send(msg);\n               \n            }\n\n        break;\n        /*WHOIS*/\n        case \"whoIs\":\n            const discoveryMs = 1000;\n            results = [];\n\n            const onIAm = (device) => {\n                const sender = device.header.sender.address;\n                const deviceId = device.payload.deviceId;\n\n                results.push({\n                    deviceId: deviceId,\n                    address: sender\n                });\n\n                node.warn(`Am reçu: ${deviceId} address : ${sender}`);\n            };\n\n            client.on('iAm', onIAm);\n\n            setTimeout(() => {\n                client.whoIs({\n                    address: flow.get('ipBroadcast')\n                });\n                node.warn(\"whoIs broadcast sent\");\n            }, 500);\n\n            setTimeout(() => {\n                client.removeListener('iAm', onIAm);\n                msg.payload = results;\n                node.send(msg);\n                msg.payload = { status: \"✅ who-is sucessful\" };\n                node.send(msg);\n                client.close();\n            }, discoveryMs);\n\n            return;\n    }\n}\ncatch (err) {\n    node.error(\"Erreur BACnet: \" + err);\n    msg.payload = {status : \"❌\" + err.message };\n    return msg;\n}\nclient.close();\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "bacnet",
+                "module": "@bacnet-js/client"
+            }
+        ],
+        "x": 500,
+        "y": 960,
+        "wires": [
+            [
+                "e05e9ae8090e8d3e"
+            ]
+        ]
+    },
+    {
+        "id": "cf90cabcb0ff4238",
+        "type": "inject",
+        "z": "316db15f9c352dcf",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 310,
+        "y": 1000,
+        "wires": [
+            [
+                "96104e8f7c51a6bc"
+            ]
+        ]
+    },
+    {
+        "id": "231e909db29d474f",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "name": "build input value",
+        "func": "flow.set('inputValue', msg.payload);",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "// Le code ajouté ici sera exécuté une fois\n// à chaque démarrage du noeud.\nflow.set('inputValue',-1);",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 920,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "4de5e79e247947fb",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "name": "function 1",
+        "func": "const serviceChoice = flow.get('serviceChoice');\n\n\nswitch (serviceChoice)\n{\n        /*READ*/\n\n        /*Ids:\n        server ip :          48e3831b80e4912e\n        target object type : 49dd29c48a589f18\n        Input value :        abcea85a3ca16c92\n        target instance(s) : ee74664820e4c539\n        server port :        24e30c8950b53bb0\n        */\n        case \"serviceRead\":\n        msg.payload = {\n                widgets: {\n                        enable: ['ee74664820e4c539','49dd29c48a589f18'],\n                        disable: ['abcea85a3ca16c92']\n                }                 \n        }\n        break; \n        /*WRITE*/\n        case \"serviceWrite\":\n        msg.payload = {\n                widgets: {\n                        enable: ['abcea85a3ca16c92', 'ee74664820e4c539','49dd29c48a589f18'],\n                        disable: []\n                }                     \n        }\n        break; \n        /*WHOIS*/\n        case \"whoIs\":\n        msg.payload = {\n                widgets: {\n                        enable: [],\n                        disable: ['abcea85a3ca16c92', 'ee74664820e4c539','49dd29c48a589f18']\n                }  \n        }\n        break;\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 760,
+        "wires": [
+            [
+                "bbd610b8d94ce79b"
+            ]
+        ]
+    },
+    {
+        "id": "d71d99a5bf121e46",
+        "type": "ui-text-input",
+        "z": "316db15f9c352dcf",
+        "group": "6a9e50ad970cb214",
+        "name": "Target instance(s)",
+        "label": "Target instance(s)",
+        "order": 5,
+        "width": 0,
+        "height": 0,
+        "topic": "targetInstances",
+        "topicType": "msg",
+        "mode": "text",
+        "tooltip": "Syntax : n instance 1,n instance 2,...,n instance N",
+        "delay": "10",
+        "passthru": true,
+        "sendOnDelay": true,
+        "sendOnBlur": true,
+        "sendOnEnter": true,
+        "className": "",
+        "clearable": false,
+        "sendOnClear": false,
+        "icon": "",
+        "iconPosition": "left",
+        "iconInnerPosition": "inside",
+        "x": 250,
+        "y": 880,
+        "wires": [
+            [
+                "16cb8d3a99ed896e"
+            ]
+        ]
+    },
+    {
+        "id": "97f033f9758ae85a",
+        "type": "ui-text-input",
+        "z": "316db15f9c352dcf",
+        "group": "6a9e50ad970cb214",
+        "name": "port dest",
+        "label": "Port dest",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "topic": "port",
+        "topicType": "msg",
+        "mode": "text",
+        "tooltip": "xxxxx",
+        "delay": "10",
+        "passthru": true,
+        "sendOnDelay": true,
+        "sendOnBlur": true,
+        "sendOnEnter": true,
+        "className": "",
+        "clearable": false,
+        "sendOnClear": false,
+        "icon": "",
+        "iconPosition": "left",
+        "iconInnerPosition": "inside",
+        "x": 220,
+        "y": 720,
+        "wires": [
+            [
+                "26d66ef2655c3148"
+            ]
+        ]
+    },
+    {
+        "id": "ac8036142039abb5",
+        "type": "ui-text-input",
+        "z": "316db15f9c352dcf",
+        "group": "6a9e50ad970cb214",
+        "name": "Server ip",
+        "label": "Server ip",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "topic": "ip",
+        "topicType": "msg",
+        "mode": "text",
+        "tooltip": "xxx.xxx.xxx.xxx",
+        "delay": "10",
+        "passthru": true,
+        "sendOnDelay": true,
+        "sendOnBlur": true,
+        "sendOnEnter": true,
+        "className": "",
+        "clearable": false,
+        "sendOnClear": false,
+        "icon": "",
+        "iconPosition": "left",
+        "iconInnerPosition": "inside",
+        "x": 220,
+        "y": 680,
+        "wires": [
+            [
+                "c9d8b4e450a7283d"
+            ]
+        ]
+    },
+    {
+        "id": "6c51cf5926dc88d3",
+        "type": "ui-text-input",
+        "z": "316db15f9c352dcf",
+        "group": "6a9e50ad970cb214",
+        "name": "Input value",
+        "label": "Input value ",
+        "order": 6,
+        "width": 0,
+        "height": 0,
+        "topic": "inputValue",
+        "topicType": "msg",
+        "mode": "text",
+        "tooltip": "",
+        "delay": "10",
+        "passthru": true,
+        "sendOnDelay": true,
+        "sendOnBlur": true,
+        "sendOnEnter": true,
+        "className": "",
+        "clearable": false,
+        "sendOnClear": false,
+        "icon": "",
+        "iconPosition": "left",
+        "iconInnerPosition": "inside",
+        "x": 230,
+        "y": 920,
+        "wires": [
+            [
+                "231e909db29d474f"
+            ]
+        ]
+    },
+    {
+        "id": "9f79722dfa66a73f",
+        "type": "ui-button",
+        "z": "316db15f9c352dcf",
+        "group": "6a9e50ad970cb214",
+        "name": "press to execute service",
+        "label": "Execute",
+        "order": 7,
+        "width": "6",
+        "height": "1",
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 270,
+        "y": 960,
+        "wires": [
+            [
+                "96104e8f7c51a6bc"
+            ]
+        ]
+    },
+    {
+        "id": "3a20d1a36703d641",
+        "type": "ui-dropdown",
+        "z": "316db15f9c352dcf",
+        "group": "6a9e50ad970cb214",
+        "name": "Service choice",
+        "label": "Service choice",
+        "tooltip": "",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "multiple": false,
+        "chips": false,
+        "clearable": false,
+        "options": [
+            {
+                "label": "Read Property (multiple)",
+                "value": "serviceRead",
+                "type": "str"
+            },
+            {
+                "label": "Write Property (multiple)",
+                "value": "serviceWrite",
+                "type": "str"
+            },
+            {
+                "label": "who-is",
+                "value": "whoIs",
+                "type": "str"
+            }
+        ],
+        "payload": "",
+        "topic": "serviceChoice",
+        "topicType": "msg",
+        "className": "",
+        "typeIsComboBox": true,
+        "msgTrigger": "onChange",
+        "x": 240,
+        "y": 800,
+        "wires": [
+            [
+                "533211a03d11ebe7",
+                "4de5e79e247947fb"
+            ]
+        ]
+    },
+    {
+        "id": "94c66fd7c0f7372e",
+        "type": "ui-dropdown",
+        "z": "316db15f9c352dcf",
+        "group": "6a9e50ad970cb214",
+        "name": "Target object type",
+        "label": "Object type",
+        "tooltip": "",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "multiple": false,
+        "chips": false,
+        "clearable": false,
+        "options": [
+            {
+                "label": "Analog Value",
+                "value": "ANALOG_VALUE",
+                "type": "str"
+            },
+            {
+                "label": "Analog Input",
+                "value": "ANALOG_INPUT",
+                "type": "str"
+            },
+            {
+                "label": "Analog Output",
+                "value": "ANALOG_OUTPUT",
+                "type": "str"
+            },
+            {
+                "label": "Binary Value",
+                "value": "BINARY_VALUE",
+                "type": "str"
+            },
+            {
+                "label": "Binary Input",
+                "value": "BINARY_INPUT",
+                "type": "str"
+            },
+            {
+                "label": "Binary Output",
+                "value": "BINARY_OUTPUT",
+                "type": "str"
+            }
+        ],
+        "payload": "",
+        "topic": "objectType",
+        "topicType": "msg",
+        "className": "",
+        "typeIsComboBox": true,
+        "msgTrigger": "onChange",
+        "x": 250,
+        "y": 840,
+        "wires": [
+            [
+                "8a4d1281b60ad11f"
+            ]
+        ]
+    },
+    {
+        "id": "e05e9ae8090e8d3e",
+        "type": "ui-table",
+        "z": "316db15f9c352dcf",
+        "group": "6a9e50ad970cb214",
+        "name": "",
+        "label": "",
+        "order": 8,
+        "width": 0,
+        "height": 0,
+        "maxrows": 0,
+        "passthru": false,
+        "autocols": true,
+        "showSearch": false,
+        "deselect": true,
+        "selectionType": "checkbox",
+        "columns": [],
+        "mobileBreakpoint": "sm",
+        "mobileBreakpointType": "defaults",
+        "action": "append",
+        "className": "",
+        "x": 690,
+        "y": 960,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "bbd610b8d94ce79b",
+        "type": "ui-control",
+        "z": "316db15f9c352dcf",
+        "name": "",
+        "ui": "e09cfd48728aad39",
+        "events": "all",
+        "x": 720,
+        "y": 760,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "1462c5de40e71af7",
+        "type": "function",
+        "z": "316db15f9c352dcf",
+        "g": "deb50a8435a0662f",
+        "name": "bacnet_client_SchedulePresentValueRead",
+        "func": "const client = new bacnet.default({ apduTimeout: 4000 });\n\nconst objectInstance = 1;\n\nclient.on('error', (err) => {\n    node.error('Erreur client: ' + err.message);\n    client.close();\n});\n\nconst address = { address: flow.get('ip') + \":\" + flow.get('port') };\n\nasync function main() {\n    try {\n        const value = await client.readProperty(\n            address,\n            { type: bacnet.ObjectType.SCHEDULE, instance: objectInstance },\n            bacnet.PropertyIdentifier.PRESENT_VALUE\n        );\n\n        const result = {\n            object: 'Schedule-present-value',\n            instance: objectInstance,\n            value: value.values[0]?.value\n        };\n\n        node.warn(JSON.stringify(result, null, 2));\n        node.send({ payload: result });\n\n    } catch (err) {\n        node.error('Erreur: ' + JSON.stringify(err, Object.getOwnPropertyNames(err)));\n    }\n}\n\nmain();\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "bacnet",
+                "module": "@bacnet-js/client"
+            }
+        ],
+        "x": 490,
+        "y": 340,
+        "wires": [
+            [
+                "6e3034465e14e273"
+            ]
+        ]
+    },
+    {
+        "id": "1b82ca7f5a1b60fc",
+        "type": "inject",
+        "z": "316db15f9c352dcf",
+        "g": "deb50a8435a0662f",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 230,
+        "y": 340,
+        "wires": [
+            [
+                "1462c5de40e71af7"
+            ]
+        ]
+    },
+    {
+        "id": "6e3034465e14e273",
+        "type": "debug",
+        "z": "316db15f9c352dcf",
+        "g": "deb50a8435a0662f",
+        "name": "debug 17",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 760,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "6a9e50ad970cb214",
+        "type": "ui-group",
+        "name": "BACnet functions",
+        "page": "34e487c15576ad44",
+        "width": 6,
+        "height": 1,
+        "order": 1,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "e09cfd48728aad39",
+        "type": "ui-base",
+        "name": "Default UI",
+        "path": "/dashboard",
+        "appIcon": "",
+        "includeClientData": true,
+        "acceptsClientConfig": [
+            "ui-notification",
+            "ui-control"
+        ],
+        "showPathInSidebar": false,
+        "headerContent": "page",
+        "navigationStyle": "default",
+        "titleBarStyle": "default",
+        "showReconnectNotification": true,
+        "notificationDisplayTime": 1,
+        "showDisconnectNotification": true,
+        "allowInstall": true
+    },
+    {
+        "id": "34e487c15576ad44",
+        "type": "ui-page",
+        "name": "Page test",
+        "ui": "e09cfd48728aad39",
+        "path": "/bacnet",
+        "icon": "home",
+        "layout": "grid",
+        "theme": "ce70820df616b739",
+        "breakpoints": [
+            {
+                "name": "Default",
+                "px": "0",
+                "cols": "3"
+            },
+            {
+                "name": "Tablet",
+                "px": "576",
+                "cols": "6"
+            },
+            {
+                "name": "Small Desktop",
+                "px": "768",
+                "cols": "9"
+            },
+            {
+                "name": "Desktop",
+                "px": "1024",
+                "cols": "12"
+            }
+        ],
+        "order": 1,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "ce70820df616b739",
+        "type": "ui-theme",
+        "name": "Default Theme",
+        "colors": {
+            "surface": "#ffffff",
+            "primary": "#0094CE",
+            "bgPage": "#eeeeee",
+            "groupBg": "#ffffff",
+            "groupOutline": "#cccccc"
+        },
+        "sizes": {
+            "density": "default",
+            "pagePadding": "12px",
+            "groupGap": "12px",
+            "groupBorderRadius": "4px",
+            "widgetGap": "12px"
+        }
+    },
+    {
+        "id": "326d9b4e464ad32e",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "@flowfuse/node-red-dashboard": "1.30.2"
+        }
+    }
+]
