@@ -333,6 +333,11 @@ static void initServiceHandlers(void) {
         close(scheduleSaveFile_fd);
     }
 
+    Schedule_Object(0)->Present_Value.type.Boolean = true;
+    Schedule_Object(1)->Present_Value.type.Boolean = true;
+    Schedule_Object(2)->Present_Value.type.Boolean = true;
+    Schedule_Object(3)->Present_Value.type.Boolean = true;
+
     Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
     Schedule_Object(1)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
     Schedule_Object(2)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;

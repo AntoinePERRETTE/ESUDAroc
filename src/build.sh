@@ -11,9 +11,8 @@ echo "\n########################################################################
 echo "building app\r\n"
 cd main
 gcc -Wall -Wextra -Werror -c sun.c
-gcc -Wall -Wextra -Werror main.c sun.o -lm
-#gcc -Wall -Wextra -Werror -c gestion_gpio.c
-#gcc -Wall -Wextra -Werror main.c sun.o gestion_gpio.o -lm -lgpiod
+gcc -Wall -Wextra -Werror -c gestion_gpio.c
+gcc -Wall -Wextra -Werror main.c sun.o gestion_gpio.o -lm -lgpiod
 echo "copying app into bin\r\n"
 cp a.out ../bin/app.out
 cd ..

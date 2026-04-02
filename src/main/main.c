@@ -129,7 +129,7 @@ int main() {
         if (localTime->tm_hour > hourOfDusk) {
             isDuskPass = 1;
         }
-        if (localTime->tm_hour > 23 && localTime->tm_min > 59 && localTime->tm_sec > 50) {
+        if (localTime->tm_hour >= 23 && localTime->tm_min >= 59 && localTime->tm_sec >= 50) {
             /* wait 20 sec */
             while(time(NULL)-now < 20000);
             sun = compute_sunData();
@@ -196,15 +196,15 @@ int main() {
         /* output set only if Dawn not passed -> it's Dusk -> lamp can be set on*/
 
         if (Schedule[0].tagOfObject == ENUMERATED) {
-            gpio_write_output_value(LINE_OUTPUT_0, (Schedule[3].value.binary & isDuskPass) | BinaryOutput[0].value.binary);
+            gpio_write_output_value(LINE_OUTPUT_0, BinaryOutput[0].value.binary & isDuskPass);
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         if (Schedule[1].tagOfObject == ENUMERATED) {
-            gpio_write_output_value(LINE_OUTPUT_1, (Schedule[3].value.binary & isDuskPass) | BinaryOutput[1].value.binary);
+            gpio_write_output_value(LINE_OUTPUT_1, BinaryOutput[1].value.binary & isDuskPass);
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         if (Schedule[2].tagOfObject == ENUMERATED) {
-            gpio_write_output_value(LINE_OUTPUT_2, (Schedule[3].value.binary & isDuskPass) | BinaryOutput[2].value.binary);
+            gpio_write_output_value(LINE_OUTPUT_2, BinaryOutput[2].value.binary & isDuskPass);
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         printf("\r\n------ output value ------\r\n");
