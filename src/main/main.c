@@ -10,7 +10,7 @@
 #include <string.h>
 #include <time.h>
 
-//#include "gestion_gpio.h"
+#include "gestion_gpio.h"
 #include "sun.h"
 
 #define LINE_INPUT_0 0
@@ -135,6 +135,8 @@ int main() {
             sun = compute_sunData();
             hourOfDawn = sun.dawn;
             hourOfDusk = sun.dusk;
+            printf("Dawn at : %f\r\n", hourOfDawn);
+            printf("Dusk at : %f\r\n", hourOfDusk);
         }
 
 
@@ -179,32 +181,31 @@ int main() {
 
         /* Uncomment to read data from gpio */
 
-        // BinaryInput[0].value.binary = gpio_read_input_value(LINE_INPUT_0);
-        // BinaryInput[1].value.binary = gpio_read_input_value(LINE_INPUT_1);
-        // BinaryInput[2].value.binary = gpio_read_input_value(LINE_INPUT_2);
+        BinaryInput[0].value.binary = gpio_read_input_value(LINE_INPUT_0);
+        BinaryInput[1].value.binary = gpio_read_input_value(LINE_INPUT_1);
+        BinaryInput[2].value.binary = gpio_read_input_value(LINE_INPUT_2);
 
         // for testing purpose
-        BinaryInput[0].value.binary ^= 1;
-        BinaryInput[1].value.binary ^= 1;
-        BinaryInput[2].value.binary ^= 1;
-
+        // BinaryInput[0].value.binary ^= 1;
+        // BinaryInput[1].value.binary ^= 1;
+        // BinaryInput[2].value.binary ^= 1;
 
         /* Uncomment to manipulate GPIO */
 
         /* Schedule[N]->PresentValue => BinaryOutput[N]->PresentValue */
         /* output set only if Dawn not passed -> it's Dusk -> lamp can be set on*/
 
-        // if (Schedule[0].tagOfObject == ENUMERATED) {
-        //     gpio_write_output_value(LINE_OUTPUT_0, (Schedule[3].value.binary & isDuskPass) | BinaryOutput[0].value.binary);
-        // } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        if (Schedule[0].tagOfObject == ENUMERATED) {
+            gpio_write_output_value(LINE_OUTPUT_0, (Schedule[3].value.binary & isDuskPass) | BinaryOutput[0].value.binary);
+        } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
-        // if (Schedule[1].tagOfObject == ENUMERATED) {
-        //     gpio_write_output_value(LINE_OUTPUT_1, (Schedule[3].value.binary & isDuskPass)) | BinaryOutput[1].value.binary);
-        // } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        if (Schedule[1].tagOfObject == ENUMERATED) {
+            gpio_write_output_value(LINE_OUTPUT_1, (Schedule[3].value.binary & isDuskPass)) | BinaryOutput[1].value.binary);
+        } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
-        // if (Schedule[2].tagOfObject == ENUMERATED) {
-        //     gpio_write_output_value(LINE_OUTPUT_2, (Schedule[3].value.binary & isDuskPass) | BinaryOutput[2].value.binary);
-        // } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        if (Schedule[2].tagOfObject == ENUMERATED) {
+            gpio_write_output_value(LINE_OUTPUT_2, (Schedule[3].value.binary & isDuskPass) | BinaryOutput[2].value.binary);
+        } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         printf("\r\n------ output value ------\r\n");
         printf("Binary Output Object %d -> %d\r\n", BinaryOutput[0].instanceOfObject, BinaryOutput[0].value.binary);
