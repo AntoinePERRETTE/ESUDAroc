@@ -125,7 +125,8 @@ int main() {
         /* is Dawn pass? or Dusk? */
         if (localTime->tm_hour > hourOfDawn) {
             isDuskPass = 0;
-        } else if (localTime->tm_hour > hourOfDusk) {
+        }
+        if (localTime->tm_hour > hourOfDusk) {
             isDuskPass = 1;
         }
         if (localTime->tm_hour > 23 && localTime->tm_min > 59 && localTime->tm_sec > 50) {
