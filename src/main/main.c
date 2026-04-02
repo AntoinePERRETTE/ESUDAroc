@@ -200,7 +200,7 @@ int main() {
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         if (Schedule[1].tagOfObject == ENUMERATED) {
-            gpio_write_output_value(LINE_OUTPUT_1, (Schedule[3].value.binary & isDuskPass)) | BinaryOutput[1].value.binary);
+            gpio_write_output_value(LINE_OUTPUT_1, (Schedule[3].value.binary & isDuskPass) | BinaryOutput[1].value.binary);
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         if (Schedule[2].tagOfObject == ENUMERATED) {
