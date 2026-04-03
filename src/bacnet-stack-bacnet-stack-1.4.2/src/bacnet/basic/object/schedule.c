@@ -12,6 +12,7 @@
 /* BACnet Stack API */
 #include "bacnet/bacdcode.h"
 #include "bacnet/bactext.h"
+#include "bacnet/dailyschedule.h"
 #include "bacnet/proplist.h"
 #include "bacnet/timestamp.h"
 #include "bacnet/basic/services.h"
@@ -265,7 +266,7 @@ bool Schedule_Weekly_Schedule_Set(
     if (pObject && (array_index < BACNET_WEEKLY_SCHEDULE_SIZE)) {
         memcpy(
             &pObject->Weekly_Schedule[array_index], value,
-            sizeof(BACNET_WEEKLY_SCHEDULE));
+            sizeof(BACNET_DAILY_SCHEDULE));
         return true;
     }
 
