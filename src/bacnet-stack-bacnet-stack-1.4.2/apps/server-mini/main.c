@@ -333,7 +333,6 @@ static void initServiceHandlers(void) {
         close(scheduleSaveFile_fd);
     }
 
-<<<<<<< HEAD
     Schedule_Object(0)->Schedule_Default.type.Boolean = 0;
     Schedule_Object(0)->Schedule_Default.tag = BACNET_APPLICATION_TAG_BOOLEAN;
 
@@ -350,17 +349,11 @@ static void initServiceHandlers(void) {
     Schedule_Object(1)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
     Schedule_Object(2)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
     Schedule_Object(3)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
-=======
+
     Schedule_Object(0)->Present_Value.type.Boolean = true;
     Schedule_Object(1)->Present_Value.type.Boolean = true;
     Schedule_Object(2)->Present_Value.type.Boolean = true;
     Schedule_Object(3)->Present_Value.type.Boolean = true;
-
-    Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
-    Schedule_Object(1)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
-    Schedule_Object(2)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
-    Schedule_Object(3)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
->>>>>>> dev_AstroCalculation
 
     uint8_t i;
     for(i = 0; i < 3; i++) {
@@ -565,6 +558,8 @@ int main() {
 
     /* if fifo don't exist, create new one
      * if fifo exist already, just pass
+     *
+     * TODO test other permition than 666
      */
     if (-1 == mkfifo(OUTPUT_FIFO_PATH, 0666) && errno != EEXIST) {
         perror("An error occured when creating FIFO");
