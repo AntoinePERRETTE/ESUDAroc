@@ -125,10 +125,10 @@ int main() {
         localTime = localtime(&now);
 
         /* is Dawn pass? or Dusk? */
-        if (localTime->tm_hour > hourOfDawn) {
+        if (localTime->tm_hour > hourOfDawn && localTime->tm_min > 60*(hourOfDawn-(int)hourOfDawn)) {
             isDuskPass = 0;
         }
-        if (localTime->tm_hour > hourOfDusk) {
+        if (localTime->tm_hour > hourOfDusk && localTime->tm_min > 60*(hourOfDusk-(int)hourOfDusk)) {
             isDuskPass = 1;
         }
         if (localTime->tm_hour >= 23 && localTime->tm_min >= 59 && localTime->tm_sec >= 50) {
