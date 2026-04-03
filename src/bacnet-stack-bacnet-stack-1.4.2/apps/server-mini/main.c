@@ -35,6 +35,7 @@
 #include "bacnet/getevent.h"
 #include "bacnet/iam.h"
 #include "bacnet/npdu.h"
+#include "bacnet/special_event.h"
 #include "bacnet/version.h"
 
 #include "bacnet/basic/service/h_apdu.h"
@@ -197,6 +198,7 @@ static object_functions_t My_Object_Table[] = {
 
 /* read every dailyschedule & start/end date for each schedule, from file */
 void readScheduleFrom(const int __scheduleSaveFile_fd) {
+    BACNET_SPECIAL_EVENT exception_schedule [BACNET_EXCEPTION_SCHEDULE_SIZE];
     BACNET_DAILY_SCHEDULE week[7] = {0};
     BACNET_DATE start_date = {0};
     BACNET_DATE end_date = {0};
@@ -246,22 +248,42 @@ void readScheduleFrom(const int __scheduleSaveFile_fd) {
         }
 
         /* get weekly schedule */
-        status = read(__scheduleSaveFile_fd, week, 7*sizeof(BACNET_DAILY_SCHEDULE));
+        status = read(__scheduleSaveFile_fd, week, BACNET_WEEKLY_SCHEDULE_SIZE*sizeof(BACNET_DAILY_SCHEDULE));
         if (-1 == status) {
             printf("Error occured while reading weekly schedule in save file : %s\n", strerror(errno));
             return;
-        } else if (7*sizeof(BACNET_DAILY_SCHEDULE) != status) {
+        } else if (BACNET_WEEKLY_SCHEDULE_SIZE*sizeof(BACNET_DAILY_SCHEDULE) != status) {
             printf("Error occured while reading weekly schedule in save file : get incorrect amount of data\n");
+            return;
+        }
+
+        /* get Exception Schedule */
+        status = read(__scheduleSaveFile_fd, exception_schedule, BACNET_EXCEPTION_SCHEDULE_SIZE*sizeof(BACNET_SPECIAL_EVENT));
+        if (-1 == status) {
+            printf("Error occured while reading exception schedule in save file : %s\n", strerror(errno));
+            return;
+        } else if (BACNET_EXCEPTION_SCHEDULE_SIZE*sizeof(BACNET_SPECIAL_EVENT) != status) {
+            printf("Error occured while reading exception schedule in save file : get incorrect amount of data\n");
             return;
         }
 
         /* set weekly schedule */
         uint8_t day;
-        for (day = 0; day < 7; day++) {
+        for (day = 0; day < BACNET_WEEKLY_SCHEDULE_SIZE; day++) {
             if (Schedule_Weekly_Schedule_Set(instance, day, &week[day])) {
                 printf("day %d schedule set !\n", day);
             } else {
                 printf("Unable to set new schedule !\n");
+            }
+        }
+
+        /* set Exception Schedule */
+        uint8_t specialEventIndex;
+        for (specialEventIndex = 0; specialEventIndex < BACNET_EXCEPTION_SCHEDULE_SIZE; specialEventIndex++) {
+            if (Schedule_Exception_Schedule_Set(instance, specialEventIndex, &exception_schedule[specialEventIndex])) {
+                printf("special event %d set !\n", specialEventIndex);
+            } else {
+                printf("Unable to set new special event !\n");
             }
         }
     }
