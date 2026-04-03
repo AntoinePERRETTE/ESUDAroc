@@ -40,7 +40,7 @@ void exitWithError(void) {
 struct dataPacket {
     enum {SCHEDULE, BINARY_OUTPUT, BINARY_INPUT, ANALOG_INPUT, ANALOG_OUTPUT} typeOfObject;
     uint32_t instanceOfObject;
-    enum {ENUMERATED, REAL} tagOfObject;
+    enum {BOOLEAN, REAL} tagOfObject;
 
     union {
         bool binary;
@@ -182,11 +182,13 @@ int main() {
             }
         }
 
+
         /* Uncomment to read data from gpio */
 
         BinaryInput[0].value.binary = gpio_read_input_value(LINE_INPUT_0);
         BinaryInput[1].value.binary = gpio_read_input_value(LINE_INPUT_1);
         BinaryInput[2].value.binary = gpio_read_input_value(LINE_INPUT_2);
+        */
 
         // for testing purpose
         // BinaryInput[0].value.binary ^= 1;

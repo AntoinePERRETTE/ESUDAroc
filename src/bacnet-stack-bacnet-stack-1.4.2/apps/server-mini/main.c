@@ -333,6 +333,24 @@ static void initServiceHandlers(void) {
         close(scheduleSaveFile_fd);
     }
 
+<<<<<<< HEAD
+    Schedule_Object(0)->Schedule_Default.type.Boolean = 0;
+    Schedule_Object(0)->Schedule_Default.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+
+    Schedule_Object(1)->Schedule_Default.type.Boolean = 0;
+    Schedule_Object(1)->Schedule_Default.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+
+    Schedule_Object(2)->Schedule_Default.type.Boolean = 0;
+    Schedule_Object(2)->Schedule_Default.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+
+    Schedule_Object(3)->Schedule_Default.type.Boolean = 0;
+    Schedule_Object(3)->Schedule_Default.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+
+    Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+    Schedule_Object(1)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+    Schedule_Object(2)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+    Schedule_Object(3)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+=======
     Schedule_Object(0)->Present_Value.type.Boolean = true;
     Schedule_Object(1)->Present_Value.type.Boolean = true;
     Schedule_Object(2)->Present_Value.type.Boolean = true;
@@ -342,6 +360,7 @@ static void initServiceHandlers(void) {
     Schedule_Object(1)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
     Schedule_Object(2)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
     Schedule_Object(3)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
+>>>>>>> dev_AstroCalculation
 
     uint8_t i;
     for(i = 0; i < 3; i++) {
@@ -392,13 +411,14 @@ static void initBacnetStack() {
 struct dataPacket {
     enum {SCHEDULE, BINARY_OUTPUT, BINARY_INPUT, ANALOG_INPUT, ANALOG_OUTPUT} typeOfObject;
     uint32_t instanceOfObject;
-    enum {ENUMERATED, REAL} tagOfObject;
+    enum {BOOLEAN, REAL} tagOfObject;
 
     union {
         bool binary;
         float analog;
     } value;
 };
+
 /**
  * @brief send data of an object through Output FIFO
  */
@@ -414,8 +434,8 @@ static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __
             if (Schedule_Object(__objectInstance)->Present_Value.tag == BACNET_APPLICATION_TAG_REAL) {
                 dataToSend.tagOfObject = REAL;
                 dataToSend.value.analog = Schedule_Object(__objectInstance)->Present_Value.type.Real;
-            } else if (Schedule_Object(__objectInstance)->Present_Value.tag == BACNET_APPLICATION_TAG_ENUMERATED) {
-                dataToSend.tagOfObject = ENUMERATED;
+            } else if (Schedule_Object(__objectInstance)->Present_Value.tag == BACNET_APPLICATION_TAG_BOOLEAN) {
+                dataToSend.tagOfObject = BOOLEAN;
                 dataToSend.value.binary = Schedule_Object(__objectInstance)->Present_Value.type.Enumerated;
             }
             break;
@@ -431,7 +451,7 @@ static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __
             break;
         case OBJECT_BINARY_OUTPUT:
             dataToSend.typeOfObject = BINARY_OUTPUT;
-            dataToSend.tagOfObject = ENUMERATED;
+            dataToSend.tagOfObject = BOOLEAN;
             if(Binary_Output_Present_Value(__objectInstance) == BINARY_ACTIVE) {
                 dataToSend.value.binary = true;
             } else {
@@ -440,7 +460,7 @@ static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __
             break;
         case OBJECT_BINARY_INPUT:
             dataToSend.typeOfObject = BINARY_INPUT;
-            dataToSend.tagOfObject = ENUMERATED;
+            dataToSend.tagOfObject = BOOLEAN;
             if(Binary_Input_Present_Value(__objectInstance) == BINARY_ACTIVE) {
                 dataToSend.value.binary = true;
             } else {

@@ -27,6 +27,7 @@
 #include "bacnet/apdu.h"
 #include "bacnet/bacdcode.h"
 #include "bacnet/bacdef.h"
+#include "bacnet/bacenum.h"
 #include "bacnet/bactext.h"
 #include "bacnet/basic/binding/address.h"
 
@@ -35,6 +36,11 @@
 #include "bacnet/basic/object/bo.h"
 #include "bacnet/basic/object/bv.h"
 #include "bacnet/basic/object/device.h"
+#include "bacnet/basic/service/h_create_object.h"
+#include "bacnet/basic/service/h_rr.h"
+#include "bacnet/calendar_entry.h"
+#include "bacnet/dailyschedule.h"
+#include "bacnet/special_event.h"
 
 #define BACNET_EXCEPTION_SCHEDULE_SIZE 8
 
@@ -292,7 +298,7 @@ static void process_task(void)
 
     if (!Binary_Output_Out_Of_Service(bo_instance)) {
         Binary_Output_Present_Value_Set(
-                bo_instance, 
+                bo_instance,
                 (BACNET_BINARY_PV) Schedule_Object(0)->Present_Value.type.Enumerated, BACNET_MAX_PRIORITY);
     }
 
@@ -310,9 +316,24 @@ static void Init_Service_Handlers(void)
     BACNET_DATE end_date = { 2030, 1, 1, 1 };
 
     Schedule_Effective_Period_Set(Schedule_Instance_To_Index(0), &start_date, &end_date);
-    Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
+    Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_REAL;
+    Schedule_Object(0)->Present_Value.type.Real = 50.0f;
 
-    
+    BACNET_TIME time = {9, 15, 15, 0};
+    BACNET_DAILY_SCHEDULE Daily_Schedule;
+    Daily_Schedule.Time_Values[0].Time = time;
+    Daily_Schedule.Time_Values[0].Value.tag = BACNET_APPLICATION_TAG_REAL;
+    Daily_Schedule.Time_Values[0].Value.type.Real = 2.4f;
+    Daily_Schedule.TV_Count = 1;
+    BACNET_CALENDAR_ENTRY date1 = {BACNET_CALENDAR_DATE, {2025, 1, 1, 1}, NULL};
+    BACNET_SPECIAL_EVENT event1 = {BACNET_SPECIAL_EVENT_PERIOD_CALENDAR_ENTRY, date1, Daily_Schedule, BACNET_MAX_PRIORITY};
+    uint8_t i = 0;
+    for (; i < 7; i++) {
+        if (Schedule_Exception_Schedule_Set(0, i, &event1)) {
+            printf("Exception schedule n°%d set!\r\n", i);
+        }
+    }
+
     /*
     if (Schedule_List_Of_Object_Property_References_Set(0, 0, )) {
         printf("Property References set!\n");
@@ -321,7 +342,7 @@ static void Init_Service_Handlers(void)
 
     /*
     BACNET_TIME time = {9, 15, 15, 0};
-    
+
     Daily_Schedule.Time_Values[0].Time = time;
     Daily_Schedule.TV_Count = 1;
 
@@ -361,6 +382,7 @@ static void Init_Service_Handlers(void)
             SERVICE_CONFIRMED_READ_PROPERTY, handler_read_property);
     apdu_set_confirmed_handler(
             SERVICE_CONFIRMED_WRITE_PROPERTY, handler_write_property);
+    apdu_set_confirmed_handler(SERVICE_CONFIRMED_READ_RANGE, handler_read_range);
     apdu_set_unrecognized_service_handler_handler(handler_unrecognized_service);
 }
 
