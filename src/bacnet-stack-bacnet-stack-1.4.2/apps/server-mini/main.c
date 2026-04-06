@@ -335,6 +335,21 @@ void writeScheduleTo(const int __scheduleSaveFile_fd) {
                 }
             }
         }
+
+        /* write all exception schedule */
+        uint8_t specialEventIndex;
+        for (specialEventIndex = 0;  specialEventIndex < BACNET_EXCEPTION_SCHEDULE_SIZE; specialEventIndex++) {
+            BACNET_SPECIAL_EVENT *speciaEventToWrite = Schedule_Exception_Schedule(instance, specialEventIndex);
+            if (NULL == speciaEventToWrite) {
+                printf("unable to get special event n° %d of schedule %d", specialEventIndex, instance);
+            } else {
+                if (write(__scheduleSaveFile_fd, speciaEventToWrite, sizeof(BACNET_SPECIAL_EVENT))) {
+                    printf("special event %d successfully written on save file", specialEventIndex);
+                } else {
+                    printf("unable to write special event %d", specialEventIndex);
+                }
+            }
+        }
     }
 }
 
