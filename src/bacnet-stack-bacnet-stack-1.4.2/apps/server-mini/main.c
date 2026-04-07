@@ -326,7 +326,7 @@ void writeScheduleTo(const int __scheduleSaveFile_fd) {
             /* get daily schedule */
             BACNET_DAILY_SCHEDULE *dailyScheduleToWrite = Schedule_Weekly_Schedule(instance, day);
             if (NULL == dailyScheduleToWrite) {
-                printf("unable to get daily schedule for day %d of schedule %d", day, instance);
+                printf("unable to get daily schedule for day %d of schedule %d\n", day, instance);
             } else {
                 if (write(__scheduleSaveFile_fd, dailyScheduleToWrite, sizeof(BACNET_DAILY_SCHEDULE))) {
                     printf("schedule %d day %d written on save file !\n", instance, day);
@@ -341,12 +341,12 @@ void writeScheduleTo(const int __scheduleSaveFile_fd) {
         for (specialEventIndex = 0;  specialEventIndex < BACNET_EXCEPTION_SCHEDULE_SIZE; specialEventIndex++) {
             BACNET_SPECIAL_EVENT *speciaEventToWrite = Schedule_Exception_Schedule(instance, specialEventIndex);
             if (NULL == speciaEventToWrite) {
-                printf("unable to get special event n° %d of schedule %d", specialEventIndex, instance);
+                printf("unable to get special event n° %d of schedule %d\n", specialEventIndex, instance);
             } else {
                 if (write(__scheduleSaveFile_fd, speciaEventToWrite, sizeof(BACNET_SPECIAL_EVENT))) {
-                    printf("special event %d successfully written on save file", specialEventIndex);
+                    printf("special event %d successfully written on save file\n", specialEventIndex);
                 } else {
-                    printf("unable to write special event %d", specialEventIndex);
+                    printf("unable to write special event %d\n", specialEventIndex);
                 }
             }
         }
