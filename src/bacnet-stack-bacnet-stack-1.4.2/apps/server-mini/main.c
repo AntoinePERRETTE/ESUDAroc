@@ -31,6 +31,7 @@
 #include "bacnet/basic/services.h"
 #include "bacnet/datalink/datalink.h"
 #include "bacnet/datalink/dlenv.h"
+#include "bacnet/datetime.h"
 #include "bacnet/dcc.h"
 #include "bacnet/getevent.h"
 #include "bacnet/iam.h"
@@ -53,7 +54,7 @@
 static uint8_t Rx_Buf[MAX_MPDU] = { 0 };
 
 /* Device week day & time */
-static BACNET_WEEKDAY actual_day;
+static BACNET_DATE actual_date;
 static BACNET_TIME actual_time;
 static struct tm calendar_time;
 
@@ -627,16 +628,19 @@ int main() {
         current_time = time(NULL);
         calendar_time = *localtime((const time_t *) &current_time);
 
-        actual_day = calendar_time.tm_wday;
+        actual_date.year = calendar_time.tm_year;
+        /* 1 = Jan, 1 = Mon */
+        actual_date.month = calendar_time.tm_mon + 1;
+        actual_date.day = calendar_time.tm_wday + 1;
         actual_time.hour = calendar_time.tm_hour;
         actual_time.min = calendar_time.tm_min;
         actual_time.sec = calendar_time.tm_sec;
 
         /* mise a jour schedule */
-        Schedule_Recalculate_PV(Schedule_Object(0), actual_day, (const BACNET_TIME *) &actual_time);
-        Schedule_Recalculate_PV(Schedule_Object(1), actual_day, (const BACNET_TIME *) &actual_time);
-        Schedule_Recalculate_PV(Schedule_Object(2), actual_day, (const BACNET_TIME *) &actual_time);
-        Schedule_Recalculate_PV(Schedule_Object(3), actual_day, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(0), actual_date, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(1), actual_date, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(2), actual_date, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(3), actual_date, (const BACNET_TIME *) &actual_time);
 
         if (outFifoFd == -1) {
             outFifoFd = open(OUTPUT_FIFO_PATH, O_WRONLY);
