@@ -1,2 +1,2 @@
 CompileFlags:
-  Add: -I/home/perrettea/Documents/Informatique/Projects/BACnet/BACnet-stack-c-test/test1/src
+    Add: -I/home/perrettea/Documents/M1ESET/ESUDAroc/src/bacnet-stack-bacnet-stack-1.4.2/src

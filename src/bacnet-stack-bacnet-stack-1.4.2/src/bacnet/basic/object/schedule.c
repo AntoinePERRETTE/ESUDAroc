@@ -980,7 +980,7 @@ bool Schedule_In_Effective_Period(
 /**
  * @brief Recalculate the Present Value of the Schedule object
  * @param desc - schedule descriptor
- * @param wday - day of the week
+ * @param date
  * @param time - time of the day
  */
 void Schedule_Recalculate_PV(
