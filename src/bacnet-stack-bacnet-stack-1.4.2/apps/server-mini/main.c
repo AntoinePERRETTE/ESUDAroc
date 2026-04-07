@@ -387,10 +387,10 @@ static void initServiceHandlers(void) {
     Schedule_Object(2)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
     Schedule_Object(3)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
 
-    Schedule_Object(0)->Present_Value.type.Boolean = true;
-    Schedule_Object(1)->Present_Value.type.Boolean = true;
-    Schedule_Object(2)->Present_Value.type.Boolean = true;
-    Schedule_Object(3)->Present_Value.type.Boolean = true;
+    Schedule_Object(0)->Present_Value.type.Boolean = false;
+    Schedule_Object(1)->Present_Value.type.Boolean = false;
+    Schedule_Object(2)->Present_Value.type.Boolean = false;
+    Schedule_Object(3)->Present_Value.type.Boolean = false;
 
     uint8_t i;
     for(i = 0; i < 3; i++) {

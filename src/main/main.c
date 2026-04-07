@@ -201,15 +201,15 @@ int main() {
         /* output set only if Dawn not passed -> it's Dusk -> lamp can be set on*/
 
         if (Schedule[0].tagOfObject == BOOLEAN) {
-            gpio_write_output_value(LINE_OUTPUT_0, BinaryOutput[0].value.binary & isDuskPass);
+            gpio_write_output_value(LINE_OUTPUT_0, BinaryOutput[0].value.binary | (Schedule[0].value.binary & isDuskPass));
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         if (Schedule[1].tagOfObject == BOOLEAN) {
-            gpio_write_output_value(LINE_OUTPUT_1, BinaryOutput[1].value.binary & isDuskPass);
+            gpio_write_output_value(LINE_OUTPUT_1, BinaryOutput[1].value.binary | (Schedule[1].value.binary & isDuskPass));
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         if (Schedule[2].tagOfObject == BOOLEAN) {
-            gpio_write_output_value(LINE_OUTPUT_2, BinaryOutput[2].value.binary & isDuskPass);
+            gpio_write_output_value(LINE_OUTPUT_2, BinaryOutput[2].value.binary | (Schedule[2].value.binary & isDuskPass));
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         printf("\r\n------ output value ------\r\n");
