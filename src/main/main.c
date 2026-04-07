@@ -40,7 +40,7 @@ void exitWithError(void) {
 struct dataPacket {
     enum {SCHEDULE, BINARY_OUTPUT, BINARY_INPUT, ANALOG_INPUT, ANALOG_OUTPUT} typeOfObject;
     uint32_t instanceOfObject;
-    enum {BOOLEAN, REAL} tagOfObject;
+    enum {BOOLEAN = 1, REAL = 4} tagOfObject;
 
     union {
         bool binary;
