@@ -631,7 +631,7 @@ int main() {
         actual_date.year = calendar_time.tm_year;
         /* 1 = Jan, 1 = Mon */
         actual_date.month = calendar_time.tm_mon + 1;
-        actual_date.day = calendar_time.tm_wday + 1;
+        actual_date.wday = calendar_time.tm_wday + 1;
         actual_time.hour = calendar_time.tm_hour;
         actual_time.min = calendar_time.tm_min;
         actual_time.sec = calendar_time.tm_sec;
