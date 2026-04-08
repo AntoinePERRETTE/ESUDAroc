@@ -140,7 +140,7 @@ bool Schedule_In_Effective_Period(
     const SCHEDULE_DESCR *desc, const BACNET_DATE *date);
 BACNET_STACK_EXPORT
 void Schedule_Recalculate_PV(
-    SCHEDULE_DESCR *desc, BACNET_DATE date, const BACNET_TIME *time);
+    SCHEDULE_DESCR *desc, BACNET_WEEKDAY wday, const BACNET_TIME *time);
 
 #ifdef __cplusplus
 }

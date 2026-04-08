@@ -14,6 +14,7 @@
 #include "bacnet/bactext.h"
 #include "bacnet/bactimevalue.h"
 #include "bacnet/dailyschedule.h"
+#include "bacnet/datetime.h"
 #include "bacnet/proplist.h"
 #include "bacnet/timestamp.h"
 #include "bacnet/basic/services.h"
@@ -984,7 +985,7 @@ bool Schedule_In_Effective_Period(
  * @param time - time of the day
  */
 void Schedule_Recalculate_PV(
-    SCHEDULE_DESCR *desc, BACNET_DATE date, const BACNET_TIME *time)
+    SCHEDULE_DESCR *desc, BACNET_WEEKDAY wday, const BACNET_TIME *time)
 {
     int i;
     desc->Present_Value.tag = BACNET_APPLICATION_TAG_NULL;
@@ -1019,17 +1020,17 @@ void Schedule_Recalculate_PV(
 
     /*  Note to developers: please ping Edward at info@connect-ex.com
         for a more complete schedule object implementation. */
-    for (i = 0; i < desc->Weekly_Schedule[date.wday - 1].TV_Count &&
+    for (i = 0; i < desc->Weekly_Schedule[wday - 1].TV_Count &&
          desc->Present_Value.tag == BACNET_APPLICATION_TAG_NULL;
          i++) {
         int diff = datetime_wildcard_compare_time(
-            time, &desc->Weekly_Schedule[date.wday - 1].Time_Values[i].Time);
+            time, &desc->Weekly_Schedule[wday - 1].Time_Values[i].Time);
         if (diff >= 0 &&
-            desc->Weekly_Schedule[date.wday - 1].Time_Values[i].Value.tag !=
+            desc->Weekly_Schedule[wday - 1].Time_Values[i].Value.tag !=
                 BACNET_APPLICATION_TAG_NULL) {
             bacnet_primitive_to_application_data_value(
                 &desc->Present_Value,
-                &desc->Weekly_Schedule[date.wday - 1].Time_Values[i].Value);
+                &desc->Weekly_Schedule[wday - 1].Time_Values[i].Value);
         }
     }
 
