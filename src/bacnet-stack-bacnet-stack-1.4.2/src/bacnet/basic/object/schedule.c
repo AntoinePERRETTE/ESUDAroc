@@ -1020,8 +1020,7 @@ void Schedule_Recalculate_PV(
 
     /*  Note to developers: please ping Edward at info@connect-ex.com
         for a more complete schedule object implementation. */
-    for (i = 0; i < desc->Weekly_Schedule[wday - 1].TV_Count &&
-         desc->Present_Value.tag == BACNET_APPLICATION_TAG_NULL;
+    for (i = 0; i < desc->Weekly_Schedule[wday - 1].TV_Count;
          i++) {
         int diff = datetime_wildcard_compare_time(
             time, &desc->Weekly_Schedule[wday - 1].Time_Values[i].Time);
