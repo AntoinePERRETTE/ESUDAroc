@@ -990,31 +990,28 @@ void Schedule_Recalculate_PV(
     int i;
     desc->Present_Value.tag = BACNET_APPLICATION_TAG_NULL;
 
-
-// #if BACNET_EXCEPTION_SCHEDULE_SIZE > 0
-//     /* find special event for this day if existing */
-//     int specialEventIndex;
-//     for (specialEventIndex = 0; specialEventIndex < BACNET_EXCEPTION_SCHEDULE_SIZE; specialEventIndex++) {
-//         /* Only work with Calendar Entry, and Date. Date range and calendar reference not implemented */
-//         if (
-//             date.year == desc->Exception_Schedule[specialEventIndex].period.calendarEntry.type.Date.year &&
-//             date.month == desc->Exception_Schedule[specialEventIndex].period.calendarEntry.type.Date.month &&
-//             date.wday == desc->Exception_Schedule[specialEventIndex].period.calendarEntry.type.Date.wday
-//         ) {
-//             for (i = 0; i < desc->Exception_Schedule[specialEventIndex].timeValues.TV_Count; i++) {
-//                 int diff = datetime_wildcard_compare_time(
-//                     time, &desc->Exception_Schedule[specialEventIndex].timeValues.Time_Values[i].Time);
-//                 if (diff >= 0 &&
-//                     desc->Exception_Schedule[specialEventIndex].timeValues.Time_Values[i].Value.tag !=
-//                     BACNET_APPLICATION_TAG_NULL) {
-//                         bacnet_primitive_to_application_data_value(
-//                             &desc->Present_Value,
-//                             &desc->Exception_Schedule[specialEventIndex].timeValues.Time_Values[i].Value);
-//                 }
-//             }
-//         }
-//     }
-// #endif
+    /* find special event for this day if existing */
+    int specialEventIndex;
+    for (specialEventIndex = 0; specialEventIndex < BACNET_EXCEPTION_SCHEDULE_SIZE; specialEventIndex++) {
+        /* Only work with Calendar Entry, and Date. Date range and calendar reference not implemented */
+        if (
+            date.year == desc->Exception_Schedule[specialEventIndex].period.calendarEntry.type.Date.year &&
+            date.month == desc->Exception_Schedule[specialEventIndex].period.calendarEntry.type.Date.month &&
+            date.wday == desc->Exception_Schedule[specialEventIndex].period.calendarEntry.type.Date.wday
+        ) {
+            for (i = 0; i < desc->Exception_Schedule[specialEventIndex].timeValues.TV_Count; i++) {
+                int diff = datetime_wildcard_compare_time(
+                    time, &desc->Exception_Schedule[specialEventIndex].timeValues.Time_Values[i].Time);
+                if (diff >= 0 &&
+                    desc->Exception_Schedule[specialEventIndex].timeValues.Time_Values[i].Value.tag !=
+                    BACNET_APPLICATION_TAG_NULL) {
+                        bacnet_primitive_to_application_data_value(
+                            &desc->Present_Value,
+                            &desc->Exception_Schedule[specialEventIndex].timeValues.Time_Values[i].Value);
+                }
+            }
+        }
+    }
 
     /*  Note to developers: please ping Edward at info@connect-ex.com
         for a more complete schedule object implementation. */
