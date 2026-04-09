@@ -628,7 +628,8 @@ int main() {
         current_time = time(NULL);
         calendar_time = *localtime((const time_t *) &current_time);
 
-        actual_date.year = calendar_time.tm_year;
+        /* BACnet use date based on years after AD, posix use years after 1900 */
+        actual_date.year = calendar_time.tm_year + 1900;
         /* 1 = Jan, 1 = Mon */
         actual_date.month = calendar_time.tm_mon + 1;
         actual_date.wday = calendar_time.tm_wday;
