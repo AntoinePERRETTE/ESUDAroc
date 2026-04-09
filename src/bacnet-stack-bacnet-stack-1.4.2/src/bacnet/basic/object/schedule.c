@@ -985,51 +985,49 @@ bool Schedule_In_Effective_Period(
  * @param time - time of the day
  */
 void Schedule_Recalculate_PV(
-    SCHEDULE_DESCR *desc, BACNET_WEEKDAY wday, const BACNET_TIME *time)
+    SCHEDULE_DESCR *desc, BACNET_DATE date, const BACNET_TIME *time)
 {
     int i;
     desc->Present_Value.tag = BACNET_APPLICATION_TAG_NULL;
 
 
-// #if BACNET_EXCEPTION_SCHEDULE_SIZE > 0
-//     /* find special event for this day if existing */
-//     int specialEventIndex;
-//     for (specialEventIndex = 0; specialEventIndex < BACNET_EXCEPTION_SCHEDULE_SIZE; specialEventIndex++) {
-//         /* Only work with Calendar Entry, and Date. Date range and calendar reference not implemented */
-//         if (
-//             date.year == desc->Exception_Schedule[specialEventIndex].period.calendarEntry.type.Date.year &&
-//             date.month == desc->Exception_Schedule[specialEventIndex].period.calendarEntry.type.Date.month &&
-//             date.wday == desc->Exception_Schedule[specialEventIndex].period.calendarEntry.type.Date.wday
-//         ) {
-//             for (i = 0; i < desc->Exception_Schedule[specialEventIndex].timeValues.TV_Count &&
-//                  desc->Present_Value.tag == BACNET_APPLICATION_TAG_NULL;
-//                  i++) {
-//                 int diff = datetime_wildcard_compare_time(
-//                     time, &desc->Exception_Schedule[specialEventIndex].timeValues.Time_Values[i].Time);
-//                 if (diff >= 0 &&
-//                     desc->Exception_Schedule[specialEventIndex].timeValues.Time_Values[i].Value.tag !=
-//                     BACNET_APPLICATION_TAG_NULL) {
-//                         bacnet_primitive_to_application_data_value(
-//                             &desc->Present_Value,
-//                             &desc->Exception_Schedule[specialEventIndex].timeValues.Time_Values[i].Value);
-//                 }
-//             }
-//         }
-//     }
-// #endif
+#if BACNET_EXCEPTION_SCHEDULE_SIZE > 0
+    /* find special event for this day if existing */
+    int specialEventIndex;
+    for (specialEventIndex = 0; specialEventIndex < BACNET_EXCEPTION_SCHEDULE_SIZE; specialEventIndex++) {
+        /* Only work with Calendar Entry, and Date. Date range and calendar reference not implemented */
+        if (
+            date.year == desc->Exception_Schedule[specialEventIndex].period.calendarEntry.type.Date.year &&
+            date.month == desc->Exception_Schedule[specialEventIndex].period.calendarEntry.type.Date.month &&
+            date.wday == desc->Exception_Schedule[specialEventIndex].period.calendarEntry.type.Date.wday
+        ) {
+            for (i = 0; i < desc->Exception_Schedule[specialEventIndex].timeValues.TV_Count; i++) {
+                int diff = datetime_wildcard_compare_time(
+                    time, &desc->Exception_Schedule[specialEventIndex].timeValues.Time_Values[i].Time);
+                if (diff >= 0 &&
+                    desc->Exception_Schedule[specialEventIndex].timeValues.Time_Values[i].Value.tag !=
+                    BACNET_APPLICATION_TAG_NULL) {
+                        bacnet_primitive_to_application_data_value(
+                            &desc->Present_Value,
+                            &desc->Exception_Schedule[specialEventIndex].timeValues.Time_Values[i].Value);
+                }
+            }
+        }
+    }
+#endif
 
     /*  Note to developers: please ping Edward at info@connect-ex.com
         for a more complete schedule object implementation. */
-    for (i = 0; i < desc->Weekly_Schedule[wday - 1].TV_Count;
+    for (i = 0; i < desc->Weekly_Schedule[date.wday - 1].TV_Count;
          i++) {
         int diff = datetime_wildcard_compare_time(
-            time, &desc->Weekly_Schedule[wday - 1].Time_Values[i].Time);
+            time, &desc->Weekly_Schedule[date.wday - 1].Time_Values[i].Time);
         if (diff >= 0 &&
-            desc->Weekly_Schedule[wday - 1].Time_Values[i].Value.tag !=
+            desc->Weekly_Schedule[date.wday - 1].Time_Values[i].Value.tag !=
                 BACNET_APPLICATION_TAG_NULL) {
             bacnet_primitive_to_application_data_value(
                 &desc->Present_Value,
-                &desc->Weekly_Schedule[wday - 1].Time_Values[i].Value);
+                &desc->Weekly_Schedule[date.wday - 1].Time_Values[i].Value);
         }
     }
 

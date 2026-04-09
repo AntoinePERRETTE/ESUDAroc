@@ -637,10 +637,10 @@ int main() {
         actual_time.sec = calendar_time.tm_sec;
 
         /* mise a jour schedule */
-        Schedule_Recalculate_PV(Schedule_Object(0), actual_date.wday, (const BACNET_TIME *) &actual_time);
-        Schedule_Recalculate_PV(Schedule_Object(1), actual_date.wday, (const BACNET_TIME *) &actual_time);
-        Schedule_Recalculate_PV(Schedule_Object(2), actual_date.wday, (const BACNET_TIME *) &actual_time);
-        Schedule_Recalculate_PV(Schedule_Object(3), actual_date.wday, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(0), actual_date, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(1), actual_date, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(2), actual_date, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(3), actual_date, (const BACNET_TIME *) &actual_time);
 
         if (outFifoFd == -1) {
             outFifoFd = open(OUTPUT_FIFO_PATH, O_WRONLY);
