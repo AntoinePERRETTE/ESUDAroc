@@ -990,7 +990,24 @@ void Schedule_Recalculate_PV(
     int i;
     desc->Present_Value.tag = BACNET_APPLICATION_TAG_NULL;
 
-    /* find special event for this day if existing */
+    /*  Note to developers: please ping Edward at info@connect-ex.com
+        for a more complete schedule object implementation. */
+    for (i = 0; i < desc->Weekly_Schedule[date.wday - 1].TV_Count;
+         i++) {
+        int diff = datetime_wildcard_compare_time(
+            time, &desc->Weekly_Schedule[date.wday - 1].Time_Values[i].Time);
+        if (diff >= 0 &&
+            desc->Weekly_Schedule[date.wday - 1].Time_Values[i].Value.tag !=
+                BACNET_APPLICATION_TAG_NULL) {
+            bacnet_primitive_to_application_data_value(
+                &desc->Present_Value,
+                &desc->Weekly_Schedule[date.wday - 1].Time_Values[i].Value);
+        }
+    }
+
+    /* find special event for this day if existing
+     * these are of higher priority than the weekly schedule
+     */
     int specialEventIndex;
     for (specialEventIndex = 0; specialEventIndex < BACNET_EXCEPTION_SCHEDULE_SIZE; specialEventIndex++) {
         /* Only work with Calendar Entry, and Date. Date range and calendar reference not implemented */
@@ -1010,21 +1027,6 @@ void Schedule_Recalculate_PV(
                             &desc->Exception_Schedule[specialEventIndex].timeValues.Time_Values[i].Value);
                 }
             }
-        }
-    }
-
-    /*  Note to developers: please ping Edward at info@connect-ex.com
-        for a more complete schedule object implementation. */
-    for (i = 0; i < desc->Weekly_Schedule[date.wday - 1].TV_Count;
-         i++) {
-        int diff = datetime_wildcard_compare_time(
-            time, &desc->Weekly_Schedule[date.wday - 1].Time_Values[i].Time);
-        if (diff >= 0 &&
-            desc->Weekly_Schedule[date.wday - 1].Time_Values[i].Value.tag !=
-                BACNET_APPLICATION_TAG_NULL) {
-            bacnet_primitive_to_application_data_value(
-                &desc->Present_Value,
-                &desc->Weekly_Schedule[date.wday - 1].Time_Values[i].Value);
         }
     }
 
