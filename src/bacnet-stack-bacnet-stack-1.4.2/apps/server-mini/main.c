@@ -31,10 +31,12 @@
 #include "bacnet/basic/services.h"
 #include "bacnet/datalink/datalink.h"
 #include "bacnet/datalink/dlenv.h"
+#include "bacnet/datetime.h"
 #include "bacnet/dcc.h"
 #include "bacnet/getevent.h"
 #include "bacnet/iam.h"
 #include "bacnet/npdu.h"
+#include "bacnet/special_event.h"
 #include "bacnet/version.h"
 
 #include "bacnet/basic/service/h_apdu.h"
@@ -52,7 +54,7 @@
 static uint8_t Rx_Buf[MAX_MPDU] = { 0 };
 
 /* Device week day & time */
-static BACNET_WEEKDAY actual_day;
+static BACNET_DATE actual_date;
 static BACNET_TIME actual_time;
 static struct tm calendar_time;
 
@@ -197,6 +199,7 @@ static object_functions_t My_Object_Table[] = {
 
 /* read every dailyschedule & start/end date for each schedule, from file */
 void readScheduleFrom(const int __scheduleSaveFile_fd) {
+    BACNET_SPECIAL_EVENT exception_schedule [BACNET_EXCEPTION_SCHEDULE_SIZE];
     BACNET_DAILY_SCHEDULE week[7] = {0};
     BACNET_DATE start_date = {0};
     BACNET_DATE end_date = {0};
@@ -246,22 +249,42 @@ void readScheduleFrom(const int __scheduleSaveFile_fd) {
         }
 
         /* get weekly schedule */
-        status = read(__scheduleSaveFile_fd, week, 7*sizeof(BACNET_DAILY_SCHEDULE));
+        status = read(__scheduleSaveFile_fd, week, BACNET_WEEKLY_SCHEDULE_SIZE*sizeof(BACNET_DAILY_SCHEDULE));
         if (-1 == status) {
             printf("Error occured while reading weekly schedule in save file : %s\n", strerror(errno));
             return;
-        } else if (7*sizeof(BACNET_DAILY_SCHEDULE) != status) {
+        } else if (BACNET_WEEKLY_SCHEDULE_SIZE*sizeof(BACNET_DAILY_SCHEDULE) != status) {
             printf("Error occured while reading weekly schedule in save file : get incorrect amount of data\n");
+            return;
+        }
+
+        /* get Exception Schedule */
+        status = read(__scheduleSaveFile_fd, exception_schedule, BACNET_EXCEPTION_SCHEDULE_SIZE*sizeof(BACNET_SPECIAL_EVENT));
+        if (-1 == status) {
+            printf("Error occured while reading exception schedule in save file : %s\n", strerror(errno));
+            return;
+        } else if (BACNET_EXCEPTION_SCHEDULE_SIZE*sizeof(BACNET_SPECIAL_EVENT) != status) {
+            printf("Error occured while reading exception schedule in save file : get incorrect amount of data\n");
             return;
         }
 
         /* set weekly schedule */
         uint8_t day;
-        for (day = 0; day < 7; day++) {
+        for (day = 0; day < BACNET_WEEKLY_SCHEDULE_SIZE; day++) {
             if (Schedule_Weekly_Schedule_Set(instance, day, &week[day])) {
                 printf("day %d schedule set !\n", day);
             } else {
                 printf("Unable to set new schedule !\n");
+            }
+        }
+
+        /* set Exception Schedule */
+        uint8_t specialEventIndex;
+        for (specialEventIndex = 0; specialEventIndex < BACNET_EXCEPTION_SCHEDULE_SIZE; specialEventIndex++) {
+            if (Schedule_Exception_Schedule_Set(instance, specialEventIndex, &exception_schedule[specialEventIndex])) {
+                printf("special event %d set !\n", specialEventIndex);
+            } else {
+                printf("Unable to set new special event !\n");
             }
         }
     }
@@ -304,12 +327,27 @@ void writeScheduleTo(const int __scheduleSaveFile_fd) {
             /* get daily schedule */
             BACNET_DAILY_SCHEDULE *dailyScheduleToWrite = Schedule_Weekly_Schedule(instance, day);
             if (NULL == dailyScheduleToWrite) {
-                printf("unable to get daily schedule for day %d of schedule %d", day, instance);
+                printf("unable to get daily schedule for day %d of schedule %d\n", day, instance);
             } else {
                 if (write(__scheduleSaveFile_fd, dailyScheduleToWrite, sizeof(BACNET_DAILY_SCHEDULE))) {
                     printf("schedule %d day %d written on save file !\n", instance, day);
                 } else {
                     printf("unable to write day %d\n", day);
+                }
+            }
+        }
+
+        /* write all exception schedule */
+        uint8_t specialEventIndex;
+        for (specialEventIndex = 0;  specialEventIndex < BACNET_EXCEPTION_SCHEDULE_SIZE; specialEventIndex++) {
+            BACNET_SPECIAL_EVENT *speciaEventToWrite = Schedule_Exception_Schedule(instance, specialEventIndex);
+            if (NULL == speciaEventToWrite) {
+                printf("unable to get special event n° %d of schedule %d\n", specialEventIndex, instance);
+            } else {
+                if (write(__scheduleSaveFile_fd, speciaEventToWrite, sizeof(BACNET_SPECIAL_EVENT))) {
+                    printf("special event %d successfully written on save file\n", specialEventIndex);
+                } else {
+                    printf("unable to write special event %d\n", specialEventIndex);
                 }
             }
         }
@@ -350,10 +388,10 @@ static void initServiceHandlers(void) {
     Schedule_Object(2)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
     Schedule_Object(3)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
 
-    Schedule_Object(0)->Present_Value.type.Boolean = true;
-    Schedule_Object(1)->Present_Value.type.Boolean = true;
-    Schedule_Object(2)->Present_Value.type.Boolean = true;
-    Schedule_Object(3)->Present_Value.type.Boolean = true;
+    Schedule_Object(0)->Present_Value.type.Boolean = false;
+    Schedule_Object(1)->Present_Value.type.Boolean = false;
+    Schedule_Object(2)->Present_Value.type.Boolean = false;
+    Schedule_Object(3)->Present_Value.type.Boolean = false;
 
     uint8_t i;
     for(i = 0; i < 3; i++) {
@@ -404,7 +442,7 @@ static void initBacnetStack() {
 struct dataPacket {
     enum {SCHEDULE, BINARY_OUTPUT, BINARY_INPUT, ANALOG_INPUT, ANALOG_OUTPUT} typeOfObject;
     uint32_t instanceOfObject;
-    enum {BOOLEAN, REAL} tagOfObject;
+    enum {BOOLEAN = 1, REAL = 4} tagOfObject;
 
     union {
         bool binary;
@@ -590,16 +628,20 @@ int main() {
         current_time = time(NULL);
         calendar_time = *localtime((const time_t *) &current_time);
 
-        actual_day = calendar_time.tm_wday;
+        /* BACnet use date based on years after AD, posix use years after 1900 */
+        actual_date.year = calendar_time.tm_year + 1900;
+        /* 1 = Jan, 1 = Mon */
+        actual_date.month = calendar_time.tm_mon + 1;
+        actual_date.wday = calendar_time.tm_wday;
         actual_time.hour = calendar_time.tm_hour;
         actual_time.min = calendar_time.tm_min;
         actual_time.sec = calendar_time.tm_sec;
 
         /* mise a jour schedule */
-        Schedule_Recalculate_PV(Schedule_Object(0), actual_day, (const BACNET_TIME *) &actual_time);
-        Schedule_Recalculate_PV(Schedule_Object(1), actual_day, (const BACNET_TIME *) &actual_time);
-        Schedule_Recalculate_PV(Schedule_Object(2), actual_day, (const BACNET_TIME *) &actual_time);
-        Schedule_Recalculate_PV(Schedule_Object(3), actual_day, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(0), actual_date, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(1), actual_date, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(2), actual_date, (const BACNET_TIME *) &actual_time);
+        Schedule_Recalculate_PV(Schedule_Object(3), actual_date, (const BACNET_TIME *) &actual_time);
 
         if (outFifoFd == -1) {
             outFifoFd = open(OUTPUT_FIFO_PATH, O_WRONLY);
