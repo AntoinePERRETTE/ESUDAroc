@@ -14,6 +14,7 @@
 #include "bacnet/apdu.h"
 #include "bacnet/bacdcode.h"
 #include "bacnet/bacdef.h"
+#include "bacnet/bacdevobjpropref.h"
 #include "bacnet/bacenum.h"
 #include "bacnet/bactext.h"
 #include "bacnet/basic/binding/address.h"
@@ -375,27 +376,32 @@ static void initServiceHandlers(void) {
         close(scheduleSaveFile_fd);
     }
 
-    Schedule_Object(0)->Schedule_Default.type.Boolean = 0;
-    Schedule_Object(0)->Schedule_Default.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+    struct schedule *s0 = Schedule_Object(0);
+    struct schedule *s1 = Schedule_Object(1);
+    struct schedule *s2 = Schedule_Object(2);
+    struct schedule *s3 = Schedule_Object(3);
 
-    Schedule_Object(1)->Schedule_Default.type.Boolean = 0;
-    Schedule_Object(1)->Schedule_Default.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+    s0->Schedule_Default.type.Boolean = 0;
+    s0->Schedule_Default.tag = BACNET_APPLICATION_TAG_BOOLEAN;
 
-    Schedule_Object(2)->Schedule_Default.type.Boolean = 0;
-    Schedule_Object(2)->Schedule_Default.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+    s1->Schedule_Default.type.Boolean = 0;
+    s1->Schedule_Default.tag = BACNET_APPLICATION_TAG_BOOLEAN;
 
-    Schedule_Object(3)->Schedule_Default.type.Boolean = 0;
-    Schedule_Object(3)->Schedule_Default.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+    s2->Schedule_Default.type.Boolean = 0;
+    s2->Schedule_Default.tag = BACNET_APPLICATION_TAG_BOOLEAN;
 
-    Schedule_Object(0)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
-    Schedule_Object(1)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
-    Schedule_Object(2)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
-    Schedule_Object(3)->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+    s3->Schedule_Default.type.Boolean = 0;
+    s3->Schedule_Default.tag = BACNET_APPLICATION_TAG_BOOLEAN;
 
-    Schedule_Object(0)->Present_Value.type.Boolean = false;
-    Schedule_Object(1)->Present_Value.type.Boolean = false;
-    Schedule_Object(2)->Present_Value.type.Boolean = false;
-    Schedule_Object(3)->Present_Value.type.Boolean = false;
+    s0->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+    s1->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+    s2->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+    s3->Present_Value.tag = BACNET_APPLICATION_TAG_BOOLEAN;
+
+    s0->Present_Value.type.Boolean = false;
+    s1->Present_Value.type.Boolean = false;
+    s2->Present_Value.type.Boolean = false;
+    s3->Present_Value.type.Boolean = false;
 
     uint8_t i;
     for(i = 0; i < NUMBER_OF_AO; i++) {

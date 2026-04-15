@@ -65,11 +65,6 @@ int main() {
     double hourOfDusk = sun.dusk;
     bool isDuskPass = 0;
 
-    printf("Dawn at : %f\r\n", hourOfDawn);
-    printf("Dusk at : %f\r\n", hourOfDusk);
-
-    printf("Binary Object n°X will be linked to GPIO n°X\r\nAnalog Object are linked to nothing\r\n");
-
     int inputFd = -1;
     int outputFd = -1;
     if (-1 == (outputFd = open(OUTPUT_FIFO_PATH, O_RDONLY))) {
@@ -111,7 +106,6 @@ int main() {
         }
 
 
-        printf("\r\n------ Received new data from the server ------\r\n");
         /* get newData for output object */
         readNewData(NUMBER_OF_OUTPUT, newDataOutput, outputFd);
 
