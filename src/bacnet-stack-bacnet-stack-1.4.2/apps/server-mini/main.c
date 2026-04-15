@@ -51,8 +51,8 @@
 #define SCHEDULESAVEFILE "ScheduleSaveFile"
 
 #define NUMBER_OF_AO 3
-#define NUMBER_OF_BO 3
-#define NUMBER_OF_BI 3
+#define NUMBER_OF_BO 8
+#define NUMBER_OF_BI 8
 
 /* Buffers */
 static uint8_t Rx_Buf[MAX_MPDU] = { 0 };

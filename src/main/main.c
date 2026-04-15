@@ -13,19 +13,11 @@
 #include "gestion_gpio.h"
 #include "sun.h"
 
-#define LINE_INPUT_0 0
-#define LINE_INPUT_1 2
-#define LINE_INPUT_2 4
-
-#define LINE_OUTPUT_0 0
-#define LINE_OUTPUT_1 2
-#define LINE_OUTPUT_2 4
-
 #define INPUT_FIFO_PATH "appToServer"
 #define OUTPUT_FIFO_PATH "serverToApp"
 
-#define NUMBER_OF_BINARY_INPUT 3
-#define NUMBER_OF_BINARY_OUTPUT 3
+#define NUMBER_OF_BINARY_INPUT 8
+#define NUMBER_OF_BINARY_OUTPUT 8
 #define NUMBER_OF_ANALOG_OUTPUT 3
 #define NUMBER_OF_SCHEDULE 4
 
@@ -76,7 +68,7 @@ int main() {
     printf("Dawn at : %f\r\n", hourOfDawn);
     printf("Dusk at : %f\r\n", hourOfDusk);
 
-    printf("Binary Object n°X will be linked to GPIO n°X\r\nAnalog Object are linked to nothing\r\nSchedule object are linked to nothing\r\n");
+    printf("Binary Object n°X will be linked to GPIO n°X\r\nAnalog Object are linked to nothing\r\n");
 
     int inputFd = -1;
     int outputFd = -1;
@@ -90,30 +82,6 @@ int main() {
     struct dataPacket newDataInput[NUMBER_OF_INPUT], newDataOutput[NUMBER_OF_OUTPUT];
     struct dataPacket BinaryOutput[NUMBER_OF_BINARY_OUTPUT], BinaryInput[NUMBER_OF_BINARY_INPUT],
                         AnalogOutput[NUMBER_OF_ANALOG_OUTPUT], Schedule[NUMBER_OF_SCHEDULE];
-
-    BinaryInput[0].typeOfObject = BINARY_INPUT;
-    BinaryInput[1].typeOfObject = BINARY_INPUT;
-    BinaryInput[2].typeOfObject = BINARY_INPUT;
-    BinaryInput[0].instanceOfObject = 0;
-    BinaryInput[1].instanceOfObject = 1;
-    BinaryInput[2].instanceOfObject = 2;
-    BinaryInput[0].value.binary = true;
-    BinaryInput[1].value.binary = true;
-    BinaryInput[2].value.binary = true;
-
-
-    BinaryOutput[0].typeOfObject = BINARY_OUTPUT;
-    BinaryOutput[1].typeOfObject = BINARY_OUTPUT;
-    BinaryOutput[2].typeOfObject = BINARY_OUTPUT;
-
-    AnalogOutput[0].typeOfObject = ANALOG_OUTPUT;
-    AnalogOutput[1].typeOfObject = ANALOG_OUTPUT;
-    AnalogOutput[2].typeOfObject = ANALOG_OUTPUT;
-
-    Schedule[0].typeOfObject = SCHEDULE;
-    Schedule[1].typeOfObject = SCHEDULE;
-    Schedule[2].typeOfObject = SCHEDULE;
-    Schedule[3].typeOfObject = SCHEDULE;
 
     time_t now = 0;
     struct tm* localTime = NULL;
@@ -182,60 +150,62 @@ int main() {
             }
         }
 
-
         /* Uncomment to read data from gpio */
 
-        BinaryInput[0].value.binary = gpio_read_input_value(LINE_INPUT_0);
-        BinaryInput[1].value.binary = gpio_read_input_value(LINE_INPUT_1);
-        BinaryInput[2].value.binary = gpio_read_input_value(LINE_INPUT_2);
-
+        for (uint8_t i = 0; i < NUMBER_OF_BINARY_INPUT; i++) {
+            BinaryInput[i].value.binary = gpio_read_input_value(i);
+        }
 
         // for testing purpose
         // BinaryInput[0].value.binary ^= 1;
         // BinaryInput[1].value.binary ^= 1;
         // BinaryInput[2].value.binary ^= 1;
 
-        /* Uncomment to manipulate GPIO */
-
         /* Schedule[N]->PresentValue => BinaryOutput[N]->PresentValue */
         /* output set only if Dawn not passed -> it's Dusk -> lamp can be set on*/
 
         if (Schedule[0].tagOfObject == BOOLEAN) {
-            gpio_write_output_value(LINE_OUTPUT_0, BinaryOutput[0].value.binary | (Schedule[0].value.binary & isDuskPass));
+            gpio_write_output_value(0, BinaryOutput[0].value.binary | (Schedule[0].value.binary & isDuskPass));
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         if (Schedule[1].tagOfObject == BOOLEAN) {
-            gpio_write_output_value(LINE_OUTPUT_1, BinaryOutput[1].value.binary | (Schedule[1].value.binary & isDuskPass));
+            gpio_write_output_value(1, BinaryOutput[1].value.binary | (Schedule[1].value.binary & isDuskPass));
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
         if (Schedule[2].tagOfObject == BOOLEAN) {
-            gpio_write_output_value(LINE_OUTPUT_2, BinaryOutput[2].value.binary | (Schedule[2].value.binary & isDuskPass));
+            gpio_write_output_value(2, BinaryOutput[2].value.binary | (Schedule[2].value.binary & isDuskPass));
         } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
 
-        printf("\r\n------ output value ------\r\n");
-        printf("Binary Output Object %d -> %d\r\n", BinaryOutput[0].instanceOfObject, BinaryOutput[0].value.binary);
-        printf("Binary Output Object %d -> %d\r\n", BinaryOutput[1].instanceOfObject, BinaryOutput[1].value.binary);
-        printf("Binary Output Object %d -> %d\r\n", BinaryOutput[2].instanceOfObject, BinaryOutput[2].value.binary);
+        // Set all remaining output with Binary Output Objects
+        for (uint8_t i = 0; i < NUMBER_OF_BINARY_OUTPUT; i++) {
+            gpio_write_output_value(i, BinaryOutput[i].value.binary);
+        }
 
-        printf("Analog Output Object %d -> %f\r\n", AnalogOutput[0].instanceOfObject, AnalogOutput[0].value.analog);
-        printf("Analog Output Object %d -> %f\r\n", AnalogOutput[1].instanceOfObject, AnalogOutput[1].value.analog);
-        printf("Analog Output Object %d -> %f\r\n", AnalogOutput[2].instanceOfObject, AnalogOutput[2].value.analog);
+        /* for debugging purpose */
+        // printf("\r\n------ output value ------\r\n");
+        // printf("Binary Output Object %d -> %d\r\n", BinaryOutput[0].instanceOfObject, BinaryOutput[0].value.binary);
+        // printf("Binary Output Object %d -> %d\r\n", BinaryOutput[1].instanceOfObject, BinaryOutput[1].value.binary);
+        // printf("Binary Output Object %d -> %d\r\n", BinaryOutput[2].instanceOfObject, BinaryOutput[2].value.binary);
 
-        printf("Schedule Object %d -> %d\r\n", Schedule[0].instanceOfObject, Schedule[0].value.binary);
-        printf("Schedule Object %d -> %d\r\n", Schedule[1].instanceOfObject, Schedule[1].value.binary);
-        printf("Schedule Object %d -> %d\r\n", Schedule[2].instanceOfObject, Schedule[2].value.binary);
-        printf("Schedule Object %d -> %d\r\n", Schedule[3].instanceOfObject, Schedule[2].value.binary);
+        // printf("Analog Output Object %d -> %f\r\n", AnalogOutput[0].instanceOfObject, AnalogOutput[0].value.analog);
+        // printf("Analog Output Object %d -> %f\r\n", AnalogOutput[1].instanceOfObject, AnalogOutput[1].value.analog);
+        // printf("Analog Output Object %d -> %f\r\n", AnalogOutput[2].instanceOfObject, AnalogOutput[2].value.analog);
 
-        printf("\r\n------ New value as input ------\r\n");
-        printf("Binary Input Object %d -> %d\r\n", BinaryInput[0].instanceOfObject, BinaryInput[0].value.binary);
-        printf("Binary Input Object %d -> %d\r\n", BinaryInput[1].instanceOfObject, BinaryInput[1].value.binary);
-        printf("Binary Input Object %d -> %d\r\n", BinaryInput[2].instanceOfObject, BinaryInput[2].value.binary);
+        // printf("Schedule Object %d -> %d\r\n", Schedule[0].instanceOfObject, Schedule[0].value.binary);
+        // printf("Schedule Object %d -> %d\r\n", Schedule[1].instanceOfObject, Schedule[1].value.binary);
+        // printf("Schedule Object %d -> %d\r\n", Schedule[2].instanceOfObject, Schedule[2].value.binary);
+        // printf("Schedule Object %d -> %d\r\n", Schedule[3].instanceOfObject, Schedule[2].value.binary);
 
-        printf("\r\n------  is Dusk passed ?  -------\r\n");
-        printf("Dawn at : %f\r\n", hourOfDawn);
-        printf("Dusk at : %f\r\n", hourOfDusk);
-        if (isDuskPass) printf("Yes !\r\n");
-        else printf("No !\r\n");
+        // printf("\r\n------ New value as input ------\r\n");
+        // printf("Binary Input Object %d -> %d\r\n", BinaryInput[0].instanceOfObject, BinaryInput[0].value.binary);
+        // printf("Binary Input Object %d -> %d\r\n", BinaryInput[1].instanceOfObject, BinaryInput[1].value.binary);
+        // printf("Binary Input Object %d -> %d\r\n", BinaryInput[2].instanceOfObject, BinaryInput[2].value.binary);
+
+        // printf("\r\n------  is Dusk passed ?  -------\r\n");
+        // printf("Dawn at : %f\r\n", hourOfDawn);
+        // printf("Dusk at : %f\r\n", hourOfDusk);
+        // if (isDuskPass) printf("Yes !\r\n");
+        // else printf("No !\r\n");
 
         /* prepare new data for server */
         for (uint8_t i = 0; i < NUMBER_OF_BINARY_INPUT; i++) {
