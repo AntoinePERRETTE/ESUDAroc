@@ -50,6 +50,10 @@
 #define OUTPUT_FIFO_PATH "serverToApp"
 #define SCHEDULESAVEFILE "ScheduleSaveFile"
 
+#define NUMBER_OF_AO 3
+#define NUMBER_OF_BO 3
+#define NUMBER_OF_BI 3
+
 /* Buffers */
 static uint8_t Rx_Buf[MAX_MPDU] = { 0 };
 
@@ -59,9 +63,9 @@ static BACNET_TIME actual_time;
 static struct tm calendar_time;
 
 /* BACnet Object Instances */
-static uint32_t ao_instance[3] = {0};
-static uint32_t bo_instance[3] = {0};
-static uint32_t bi_instance[3] = {0};
+static uint32_t ao_instance[NUMBER_OF_AO] = {0};
+static uint32_t bo_instance[NUMBER_OF_BO] = {0};
+static uint32_t bi_instance[NUMBER_OF_BI] = {0};
 
 /* Custom Object Table */
 static object_functions_t My_Object_Table[] = {
@@ -394,19 +398,24 @@ static void initServiceHandlers(void) {
     Schedule_Object(3)->Present_Value.type.Boolean = false;
 
     uint8_t i;
-    for(i = 0; i < 3; i++) {
+    for(i = 0; i < NUMBER_OF_AO; i++) {
         ao_instance[i] = Analog_Output_Create(i);
-        bo_instance[i] = Binary_Output_Create(i);
-        bi_instance[i] = Binary_Input_Create(i);
 
-        Binary_Input_Name_Set(bi_instance[i], "BI Read-Only");
-
-        Analog_Output_Name_Set(ao_instance[i], "AO Writeable");
+        Analog_Output_Name_Set(ao_instance[i], "AO - For offset or analog output");
         Analog_Output_Units_Set(ao_instance[i], UNITS_PERCENT);
-        Analog_Output_Present_Value_Set(ao_instance[i], 50.0, BACNET_MAX_PRIORITY);
+        Analog_Output_Present_Value_Set(ao_instance[i], 0.0, BACNET_MAX_PRIORITY);
+    }
 
-        Binary_Output_Name_Set(bo_instance[i], "BO Writeable");
+    for(i = 0; i < NUMBER_OF_BO; i++) {
+        bo_instance[i] = Binary_Output_Create(i);
+
+        Binary_Output_Name_Set(bo_instance[i], "Binary Output");
         Binary_Output_Present_Value_Set(bo_instance[i], 0, BACNET_MAX_PRIORITY);
+    }
+
+    for(i = 0; i < NUMBER_OF_BI; i++) {
+        bi_instance[i] = Binary_Input_Create(i);
+        Binary_Input_Name_Set(bi_instance[i], "Binary Input");
     }
 
     /* BACnet service handlers */
@@ -457,7 +466,6 @@ static void sendObjectDataToFifo(enum BACnetObjectType __objectType, uint32_t __
     struct dataPacket dataToSend;
 
     /* serialyse data */
-
     dataToSend.instanceOfObject = __objectInstance;
     switch (__objectType) {
         case OBJECT_SCHEDULE:
@@ -521,13 +529,14 @@ static struct dataPacket receiveObjectDataFromFifo(int __fifoFd) {
 
 static void sendDataToApp(int __outputFd) {
     if (-1 != __outputFd) {
-        sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[0], __outputFd);
-        sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[1], __outputFd);
-        sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[2], __outputFd);
+        uint8_t i;
+        for (i = 0; i < NUMBER_OF_BO; i++) {
+            sendObjectDataToFifo(OBJECT_BINARY_OUTPUT, bo_instance[i], __outputFd);
+        }
 
-        sendObjectDataToFifo(OBJECT_ANALOG_OUTPUT, ao_instance[0], __outputFd);
-        sendObjectDataToFifo(OBJECT_ANALOG_OUTPUT, ao_instance[1], __outputFd);
-        sendObjectDataToFifo(OBJECT_ANALOG_OUTPUT, ao_instance[2], __outputFd);
+        for (i = 0; i < NUMBER_OF_AO; i++) {
+            sendObjectDataToFifo(OBJECT_ANALOG_OUTPUT, ao_instance[i], __outputFd);
+        }
 
         sendObjectDataToFifo(OBJECT_SCHEDULE, 0, __outputFd);
         sendObjectDataToFifo(OBJECT_SCHEDULE, 1, __outputFd);
@@ -546,16 +555,13 @@ static void readDataFromApp(int __inputFd) {
 
     /* TODO : Check object type & object tag validity between received data and local object */
     uint8_t i;
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < NUMBER_OF_BI; i++) {
         struct dataPacket newData = receiveObjectDataFromFifo(__inputFd);
         switch (newData.typeOfObject) {
             case BINARY_INPUT:
                 if (newData.value.binary != Binary_Input_Present_Value(newData.instanceOfObject)) {
                     Binary_Input_Present_Value_Set(newData.instanceOfObject, (BACNET_BINARY_PV) newData.value.binary);
                 }
-                break;
-            case ANALOG_INPUT:
-                Analog_Input_Present_Value_Set(newData.instanceOfObject, newData.value.analog);
                 break;
             default:
                 break;
