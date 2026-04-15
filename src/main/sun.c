@@ -63,8 +63,8 @@ struct sunData compute_sunData()
     s.dayOfYear = getDayOfYear(s.day,s.month,s.year);
 
     /* Position (exemple : Paris) */
-    s.latitude = 48.8566;
-    s.longitude = 2.3522;
+    s.latitude = LONGITUDE;
+    s.longitude = LATITUDE;
 
     s.declination = getDeclination(s.dayOfYear);
     s.equationOfTime = getEquationOfTime(s.dayOfYear);

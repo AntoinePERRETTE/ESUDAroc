@@ -8,6 +8,9 @@
 #define DEG (180.0/M_PI)
 #define UTC_OFFSET 1
 
+#define LONGITUDE 48.8566f
+#define LATITUDE 2.3522f
+
 struct sunData {
     int day, month, year;
     int dayOfYear;
