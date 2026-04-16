@@ -63,6 +63,8 @@ int main() {
     struct sunData sun = compute_sunData();
     double hourOfDawn = sun.dawn;
     double hourOfDusk = sun.dusk;
+    double hourOfDawnWithOffset;
+    double hourOfDuskWithOffset;
     bool isDuskPass = 0;
 
     int inputFd = -1;
@@ -80,7 +82,7 @@ int main() {
 
     for (uint8_t i = 0; i < NUMBER_OF_BINARY_INPUT; i++) {
         BinaryInput[i].instanceOfObject = i;
-        BinaryInput[i].tagOfObject = BINARY_INPUT;
+        BinaryInput[i].typeOfObject = BINARY_INPUT;
     }
 
     time_t now = 0;
@@ -130,14 +132,14 @@ int main() {
             }
         }
 
-        hourOfDawn += AnalogOutput[0].value.analog;
-        hourOfDusk += AnalogOutput[1].value.analog;
+        hourOfDawnWithOffset = hourOfDawn + AnalogOutput[0].value.analog;
+        hourOfDuskWithOffset += hourOfDusk + AnalogOutput[1].value.analog;
 
         /* is Dawn pass? or Dusk? */
-        if (localTime->tm_hour > hourOfDawn && localTime->tm_min > 60*(hourOfDawn-(int)hourOfDawn)) {
+        if (localTime->tm_hour > hourOfDawnWithOffset && localTime->tm_min > 60*(hourOfDawnWithOffset-(int)hourOfDawnWithOffset)) {
             isDuskPass = 0;
         }
-        if (localTime->tm_hour > hourOfDusk && localTime->tm_min > 60*(hourOfDusk-(int)hourOfDusk)) {
+        if (localTime->tm_hour > hourOfDuskWithOffset && localTime->tm_min > 60*(hourOfDuskWithOffset-(int)hourOfDuskWithOffset)) {
             isDuskPass = 1;
         }
         if (localTime->tm_hour >= 23 && localTime->tm_min >= 59 && localTime->tm_sec >= 50) {
