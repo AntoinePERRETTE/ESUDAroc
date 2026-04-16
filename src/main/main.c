@@ -136,7 +136,7 @@ int main() {
         }
 
         hourOfDawnWithOffset = hourOfDawn + AnalogOutput[0].value.analog;
-        hourOfDuskWithOffset += hourOfDusk + AnalogOutput[1].value.analog;
+        hourOfDuskWithOffset = hourOfDusk + AnalogOutput[1].value.analog;
 
         /* is Dawn pass? or Dusk? */
         if (localTime->tm_hour > hourOfDawnWithOffset && localTime->tm_min > 60*(hourOfDawnWithOffset-(int)hourOfDawnWithOffset)) {
@@ -200,24 +200,24 @@ int main() {
         }
 
         /* for debugging purpose */
-        // printf("\r\n------ output value ------\r\n");
-        // printf("Binary Output Object %d -> %d\r\n", BinaryOutput[0].instanceOfObject, BinaryOutput[0].value.binary);
-        // printf("Binary Output Object %d -> %d\r\n", BinaryOutput[1].instanceOfObject, BinaryOutput[1].value.binary);
-        // printf("Binary Output Object %d -> %d\r\n", BinaryOutput[2].instanceOfObject, BinaryOutput[2].value.binary);
+        printf("\r\n------ output value ------\r\n");
+        printf("Binary Output Object %d -> %d\r\n", BinaryOutput[0].instanceOfObject, BinaryOutput[0].value.binary);
+        printf("Binary Output Object %d -> %d\r\n", BinaryOutput[1].instanceOfObject, BinaryOutput[1].value.binary);
+        printf("Binary Output Object %d -> %d\r\n", BinaryOutput[2].instanceOfObject, BinaryOutput[2].value.binary);
 
-        // printf("Analog Output Object %d -> %f\r\n", AnalogOutput[0].instanceOfObject, AnalogOutput[0].value.analog);
-        // printf("Analog Output Object %d -> %f\r\n", AnalogOutput[1].instanceOfObject, AnalogOutput[1].value.analog);
-        // printf("Analog Output Object %d -> %f\r\n", AnalogOutput[2].instanceOfObject, AnalogOutput[2].value.analog);
+        printf("Analog Output Object %d -> %f\r\n", AnalogOutput[0].instanceOfObject, AnalogOutput[0].value.analog);
+        printf("Analog Output Object %d -> %f\r\n", AnalogOutput[1].instanceOfObject, AnalogOutput[1].value.analog);
+        printf("Analog Output Object %d -> %f\r\n", AnalogOutput[2].instanceOfObject, AnalogOutput[2].value.analog);
 
-        // printf("Schedule Object %d -> %d\r\n", Schedule[0].instanceOfObject, Schedule[0].value.binary);
-        // printf("Schedule Object %d -> %d\r\n", Schedule[1].instanceOfObject, Schedule[1].value.binary);
-        // printf("Schedule Object %d -> %d\r\n", Schedule[2].instanceOfObject, Schedule[2].value.binary);
-        // printf("Schedule Object %d -> %d\r\n", Schedule[3].instanceOfObject, Schedule[2].value.binary);
+        printf("Schedule Object %d -> %d\r\n", Schedule[0].instanceOfObject, Schedule[0].value.binary);
+        printf("Schedule Object %d -> %d\r\n", Schedule[1].instanceOfObject, Schedule[1].value.binary);
+        printf("Schedule Object %d -> %d\r\n", Schedule[2].instanceOfObject, Schedule[2].value.binary);
+        printf("Schedule Object %d -> %d\r\n", Schedule[3].instanceOfObject, Schedule[2].value.binary);
 
-        // printf("\r\n------ New value as input ------\r\n");
-        // printf("Binary Input Object %d -> %d\r\n", BinaryInput[0].instanceOfObject, BinaryInput[0].value.binary);
-        // printf("Binary Input Object %d -> %d\r\n", BinaryInput[1].instanceOfObject, BinaryInput[1].value.binary);
-        // printf("Binary Input Object %d -> %d\r\n", BinaryInput[2].instanceOfObject, BinaryInput[2].value.binary);
+        printf("\r\n------ New value as input ------\r\n");
+        printf("Binary Input Object %d -> %d\r\n", BinaryInput[0].instanceOfObject, BinaryInput[0].value.binary);
+        printf("Binary Input Object %d -> %d\r\n", BinaryInput[1].instanceOfObject, BinaryInput[1].value.binary);
+        printf("Binary Input Object %d -> %d\r\n", BinaryInput[2].instanceOfObject, BinaryInput[2].value.binary);
 
         printf("\r\n------  is Dusk passed ?  -------\r\n");
         printf("Dawn at : %f\r\n", hourOfDawnWithOffset);
