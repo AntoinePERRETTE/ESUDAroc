@@ -85,7 +85,7 @@ int main() {
         BinaryInput[i].typeOfObject = BINARY_INPUT;
     }
 
-    bool scheduleLastValue[NUMBER_OF_SCHEDULE] = {0};
+    bool scheduleAndNightLastValue[NUMBER_OF_SCHEDULE] = {0};
     bool BinaryLastValue[NUMBER_OF_BINARY_OUTPUT] = {0};
 
     time_t now = 0;
@@ -174,26 +174,20 @@ int main() {
 
         if (BinaryLastValue[0] != BinaryOutput[0].value.binary) {
             gpio_write_output_value(0, BinaryOutput[0].value.binary);
-        } else if (scheduleLastValue[0] != Schedule[0].value.binary) {
-            if (Schedule[0].tagOfObject == BOOLEAN) {
-                gpio_write_output_value(0, Schedule[0].value.binary & isDuskPass);
-            } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        } else if (scheduleAndNightLastValue[0] != ( Schedule[0].value.binary & isDuskPass)) {
+            gpio_write_output_value(0, isDuskPass);
         }
 
         if (BinaryLastValue[1] != BinaryOutput[1].value.binary) {
             gpio_write_output_value(1, BinaryOutput[1].value.binary);
-        } else if (scheduleLastValue[1] != Schedule[1].value.binary) {
-            if (Schedule[1].tagOfObject == BOOLEAN) {
-                gpio_write_output_value(1, Schedule[1].value.binary & isDuskPass);
-            } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        } else if (scheduleAndNightLastValue[1] != ( Schedule[1].value.binary & isDuskPass)) {
+            gpio_write_output_value(1, isDuskPass);
         }
 
         if (BinaryLastValue[2] != BinaryOutput[2].value.binary) {
             gpio_write_output_value(2, BinaryOutput[2].value.binary);
-        } else if (scheduleLastValue[2] != Schedule[2].value.binary) {
-            if (Schedule[2].tagOfObject == BOOLEAN) {
-                gpio_write_output_value(2, Schedule[2].value.binary & isDuskPass);
-            } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        } else if (scheduleAndNightLastValue[2] != ( Schedule[2].value.binary & isDuskPass)) {
+            gpio_write_output_value(2, isDuskPass);
         }
 
         BinaryLastValue[0] = BinaryOutput[0].value.binary;
@@ -205,10 +199,10 @@ int main() {
             BinaryLastValue[i] = BinaryOutput[i].value.binary;
         }
 
-        scheduleLastValue[0] = Schedule[0].value.binary;
-        scheduleLastValue[1] = Schedule[1].value.binary;
-        scheduleLastValue[2] = Schedule[2].value.binary;
-        scheduleLastValue[3] = Schedule[3].value.binary;
+        scheduleAndNightLastValue[0] = ( Schedule[0].value.binary & isDuskPass);
+        scheduleAndNightLastValue[1] = ( Schedule[1].value.binary & isDuskPass);
+        scheduleAndNightLastValue[2] = ( Schedule[2].value.binary & isDuskPass);
+        scheduleAndNightLastValue[3] = ( Schedule[3].value.binary & isDuskPass);
 
         /* for debugging purpose */
         printf("\r\n------ output value ------\r\n");
