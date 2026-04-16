@@ -85,6 +85,9 @@ int main() {
         BinaryInput[i].typeOfObject = BINARY_INPUT;
     }
 
+    static bool scheduleLastValue[NUMBER_OF_SCHEDULE] = {0};
+    static bool BinaryLastValue[NUMBER_OF_BINARY_OUTPUT] = {0};
+
     time_t now = 0;
     struct tm* localTime = NULL;
 
@@ -149,8 +152,8 @@ int main() {
             sun = compute_sunData();
             hourOfDawn = sun.dawn;
             hourOfDusk = sun.dusk;
-            printf("Dawn at : %f\r\n", hourOfDawn);
-            printf("Dusk at : %f\r\n", hourOfDusk);
+            printf("Dawn at : %f\r\n", hourOfDawnWithOffset);
+            printf("Dusk at : %f\r\n", hourOfDuskWithOffset);
         }
 
         /* Uncomment to read data from gpio */
@@ -167,17 +170,29 @@ int main() {
         /* Schedule[N]->PresentValue => BinaryOutput[N]->PresentValue */
         /* output set only if Dawn not passed -> it's Dusk -> lamp can be set on*/
 
-        if (Schedule[0].tagOfObject == BOOLEAN) {
-            gpio_write_output_value(0, BinaryOutput[0].value.binary | (Schedule[0].value.binary & isDuskPass));
-        } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        if (BinaryLastValue[0] != BinaryOutput[0].value.binary) {
+            gpio_write_output_value(0, BinaryOutput[0].value.binary);
+        } else if (scheduleLastValue[0] != Schedule[0].value.binary) {
+            if (Schedule[0].tagOfObject == BOOLEAN) {
+                gpio_write_output_value(0, Schedule[0].value.binary & isDuskPass);
+            } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        }
 
-        if (Schedule[1].tagOfObject == BOOLEAN) {
-            gpio_write_output_value(1, BinaryOutput[1].value.binary | (Schedule[1].value.binary & isDuskPass));
-        } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        if (BinaryLastValue[1] != BinaryOutput[1].value.binary) {
+            gpio_write_output_value(1, BinaryOutput[1].value.binary);
+        } else if (scheduleLastValue[1] != Schedule[1].value.binary) {
+            if (Schedule[1].tagOfObject == BOOLEAN) {
+                gpio_write_output_value(1, Schedule[1].value.binary & isDuskPass);
+            } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        }
 
-        if (Schedule[2].tagOfObject == BOOLEAN) {
-            gpio_write_output_value(2, BinaryOutput[2].value.binary | (Schedule[2].value.binary & isDuskPass));
-        } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        if (BinaryLastValue[2] != BinaryOutput[2].value.binary) {
+            gpio_write_output_value(2, BinaryOutput[2].value.binary);
+        } else if (scheduleLastValue[2] != Schedule[2].value.binary) {
+            if (Schedule[2].tagOfObject == BOOLEAN) {
+                gpio_write_output_value(2, Schedule[2].value.binary & isDuskPass);
+            } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        }
 
         // Set all remaining output with Binary Output Objects
         for (uint8_t i = 0; i < NUMBER_OF_BINARY_OUTPUT; i++) {
@@ -205,8 +220,8 @@ int main() {
         // printf("Binary Input Object %d -> %d\r\n", BinaryInput[2].instanceOfObject, BinaryInput[2].value.binary);
 
         printf("\r\n------  is Dusk passed ?  -------\r\n");
-        printf("Dawn at : %f\r\n", hourOfDawn);
-        printf("Dusk at : %f\r\n", hourOfDusk);
+        printf("Dawn at : %f\r\n", hourOfDawnWithOffset);
+        printf("Dusk at : %f\r\n", hourOfDuskWithOffset);
         if (isDuskPass) printf("Yes !\r\n");
         else printf("No !\r\n");
 

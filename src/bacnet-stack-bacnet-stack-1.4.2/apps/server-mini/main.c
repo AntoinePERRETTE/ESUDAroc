@@ -404,19 +404,20 @@ static void initServiceHandlers(void) {
     s2->Present_Value.type.Boolean = false;
     s3->Present_Value.type.Boolean = false;
 
-    BACNET_OBJECT_ID objBO0 = {
-        .instance = 0,
-        .type = OBJECT_BINARY_OUTPUT
-    };
+    // uncomment is you want to try property reference. Do not work at this time.
+    // BACNET_OBJECT_ID objBO0 = {
+    //     .instance = 0,
+    //     .type = OBJECT_BINARY_OUTPUT
+    // };
 
-    BACNET_DEVICE_OBJECT_PROPERTY_REFERENCE refToBO0 = {
-        .arrayIndex = 0,
-        .deviceIdentifier = 123456,
-        .objectIdentifier = objBO0, // id , type
-        .propertyIdentifier = PROP_PRESENT_VALUE//find id for present-value
-    };
+    // BACNET_DEVICE_OBJECT_PROPERTY_REFERENCE refToBO0 = {
+    //     .arrayIndex = 0,
+    //     .deviceIdentifier = 123456,
+    //     .objectIdentifier = objBO0, // id , type
+    //     .propertyIdentifier = PROP_PRESENT_VALUE//find id for present-value
+    // };
 
-    Schedule_List_Of_Object_Property_References_Set(0, 0, &refToBO0);
+    // Schedule_List_Of_Object_Property_References_Set(0, 0, &refToBO0);
 
     uint8_t i;
     for(i = 0; i < NUMBER_OF_AO; i++) {
