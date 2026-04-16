@@ -175,19 +175,19 @@ int main() {
         if (BinaryLastValue[0] != BinaryOutput[0].value.binary) {
             gpio_write_output_value(0, BinaryOutput[0].value.binary);
         } else if (scheduleAndNightLastValue[0] != ( Schedule[0].value.binary & isDuskPass)) {
-            gpio_write_output_value(0, isDuskPass);
+            gpio_write_output_value(0, (Schedule[0].value.binary & isDuskPass));
         }
 
         if (BinaryLastValue[1] != BinaryOutput[1].value.binary) {
             gpio_write_output_value(1, BinaryOutput[1].value.binary);
         } else if (scheduleAndNightLastValue[1] != ( Schedule[1].value.binary & isDuskPass)) {
-            gpio_write_output_value(1, isDuskPass);
+            gpio_write_output_value(1, (Schedule[1].value.binary & isDuskPass));
         }
 
         if (BinaryLastValue[2] != BinaryOutput[2].value.binary) {
             gpio_write_output_value(2, BinaryOutput[2].value.binary);
         } else if (scheduleAndNightLastValue[2] != ( Schedule[2].value.binary & isDuskPass)) {
-            gpio_write_output_value(2, isDuskPass);
+            gpio_write_output_value(2, (Schedule[2].value.binary & isDuskPass));
         }
 
         BinaryLastValue[0] = BinaryOutput[0].value.binary;
