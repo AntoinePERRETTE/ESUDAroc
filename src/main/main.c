@@ -85,8 +85,8 @@ int main() {
         BinaryInput[i].typeOfObject = BINARY_INPUT;
     }
 
-    static bool scheduleLastValue[NUMBER_OF_SCHEDULE] = {0};
-    static bool BinaryLastValue[NUMBER_OF_BINARY_OUTPUT] = {0};
+    bool scheduleLastValue[NUMBER_OF_SCHEDULE] = {0};
+    bool BinaryLastValue[NUMBER_OF_BINARY_OUTPUT] = {0};
 
     time_t now = 0;
     struct tm* localTime = NULL;
@@ -196,8 +196,11 @@ int main() {
             } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
         }
 
+        BinaryLastValue[0] = BinaryOutput[0].value.binary;
+        BinaryLastValue[1] = BinaryOutput[1].value.binary;
+        BinaryLastValue[2] = BinaryOutput[2].value.binary;
         // Set all remaining output with Binary Output Objects
-        for (uint8_t i = 0; i < NUMBER_OF_BINARY_OUTPUT; i++) {
+        for (uint8_t i = 3; i < NUMBER_OF_BINARY_OUTPUT; i++) {
             gpio_write_output_value(i, BinaryOutput[i].value.binary);
             BinaryLastValue[i] = BinaryOutput[i].value.binary;
         }
