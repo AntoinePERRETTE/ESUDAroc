@@ -78,6 +78,11 @@ int main() {
     struct dataPacket BinaryOutput[NUMBER_OF_BINARY_OUTPUT], BinaryInput[NUMBER_OF_BINARY_INPUT],
                         AnalogOutput[NUMBER_OF_ANALOG_OUTPUT], Schedule[NUMBER_OF_SCHEDULE];
 
+    for (uint8_t i = 0; i < NUMBER_OF_BINARY_INPUT; i++) {
+        BinaryInput[i].instanceOfObject = i;
+        BinaryInput[i].tagOfObject = BINARY_INPUT;
+    }
+
     time_t now = 0;
     struct tm* localTime = NULL;
 
@@ -86,25 +91,6 @@ int main() {
         /* compare with Dawn & Dusk */
         now = time(NULL);
         localTime = localtime(&now);
-
-        /* is Dawn pass? or Dusk? */
-        if (localTime->tm_hour > hourOfDawn && localTime->tm_min > 60*(hourOfDawn-(int)hourOfDawn)) {
-            isDuskPass = 0;
-        }
-        if (localTime->tm_hour > hourOfDusk && localTime->tm_min > 60*(hourOfDusk-(int)hourOfDusk)) {
-            isDuskPass = 1;
-        }
-        if (localTime->tm_hour >= 23 && localTime->tm_min >= 59 && localTime->tm_sec >= 50) {
-            now = time(NULL);
-            /* wait 20 sec */
-            while(time(NULL)-now < 20000);
-            sun = compute_sunData();
-            hourOfDawn = sun.dawn;
-            hourOfDusk = sun.dusk;
-            printf("Dawn at : %f\r\n", hourOfDawn);
-            printf("Dusk at : %f\r\n", hourOfDusk);
-        }
-
 
         /* get newData for output object */
         readNewData(NUMBER_OF_OUTPUT, newDataOutput, outputFd);
@@ -142,6 +128,27 @@ int main() {
                 default:
                     break;
             }
+        }
+
+        hourOfDawn += AnalogOutput[0].value.analog;
+        hourOfDusk += AnalogOutput[1].value.analog;
+
+        /* is Dawn pass? or Dusk? */
+        if (localTime->tm_hour > hourOfDawn && localTime->tm_min > 60*(hourOfDawn-(int)hourOfDawn)) {
+            isDuskPass = 0;
+        }
+        if (localTime->tm_hour > hourOfDusk && localTime->tm_min > 60*(hourOfDusk-(int)hourOfDusk)) {
+            isDuskPass = 1;
+        }
+        if (localTime->tm_hour >= 23 && localTime->tm_min >= 59 && localTime->tm_sec >= 50) {
+            now = time(NULL);
+            /* wait 20 sec */
+            while(time(NULL)-now < 20000);
+            sun = compute_sunData();
+            hourOfDawn = sun.dawn;
+            hourOfDusk = sun.dusk;
+            printf("Dawn at : %f\r\n", hourOfDawn);
+            printf("Dusk at : %f\r\n", hourOfDusk);
         }
 
         /* Uncomment to read data from gpio */
@@ -195,11 +202,11 @@ int main() {
         // printf("Binary Input Object %d -> %d\r\n", BinaryInput[1].instanceOfObject, BinaryInput[1].value.binary);
         // printf("Binary Input Object %d -> %d\r\n", BinaryInput[2].instanceOfObject, BinaryInput[2].value.binary);
 
-        // printf("\r\n------  is Dusk passed ?  -------\r\n");
-        // printf("Dawn at : %f\r\n", hourOfDawn);
-        // printf("Dusk at : %f\r\n", hourOfDusk);
-        // if (isDuskPass) printf("Yes !\r\n");
-        // else printf("No !\r\n");
+        printf("\r\n------  is Dusk passed ?  -------\r\n");
+        printf("Dawn at : %f\r\n", hourOfDawn);
+        printf("Dusk at : %f\r\n", hourOfDusk);
+        if (isDuskPass) printf("Yes !\r\n");
+        else printf("No !\r\n");
 
         /* prepare new data for server */
         for (uint8_t i = 0; i < NUMBER_OF_BINARY_INPUT; i++) {

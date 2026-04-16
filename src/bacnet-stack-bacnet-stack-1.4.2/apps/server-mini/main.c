@@ -403,6 +403,13 @@ static void initServiceHandlers(void) {
     s2->Present_Value.type.Boolean = false;
     s3->Present_Value.type.Boolean = false;
 
+    // BACNET_DEVICE_OBJECT_PROPERTY_REFERENCE refToB01 = {
+    //     .arrayIndex = 0,
+    //     .deviceIdentifier = 123456,
+    //     .objectIdentifier = 0, // id , type
+    //     .propertyIdentifier = ? //find id for present-value
+    // };
+
     uint8_t i;
     for(i = 0; i < NUMBER_OF_AO; i++) {
         ao_instance[i] = Analog_Output_Create(i);
