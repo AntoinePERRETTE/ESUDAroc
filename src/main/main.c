@@ -169,7 +169,6 @@ int main() {
         // BinaryInput[1].value.binary ^= 1;
         // BinaryInput[2].value.binary ^= 1;
 
-        /* Schedule[N]->PresentValue => BinaryOutput[N]->PresentValue */
         /* output set only if Dawn not passed -> it's Dusk -> lamp can be set on*/
 
         if (BinaryLastValue[0] != BinaryOutput[0].value.binary) {
