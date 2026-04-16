@@ -63,8 +63,8 @@ int main() {
     struct sunData sun = compute_sunData();
     double hourOfDawn = sun.dawn;
     double hourOfDusk = sun.dusk;
-    double hourOfDawnWithOffset;
-    double hourOfDuskWithOffset;
+    double hourOfDawnWithOffset = sun.dawn;
+    double hourOfDuskWithOffset = sun.dusk;
     bool isDuskPass = 0;
 
     int inputFd = -1;
