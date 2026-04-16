@@ -139,21 +139,23 @@ int main() {
         hourOfDuskWithOffset = hourOfDusk + AnalogOutput[1].value.analog;
 
         /* is Dawn pass? or Dusk? */
-        if (localTime->tm_hour > hourOfDawnWithOffset && localTime->tm_min > 60*(hourOfDawnWithOffset-(int)hourOfDawnWithOffset)) {
+        if (localTime->tm_hour > hourOfDawnWithOffset /* && localTime->tm_min > 60*(hourOfDawnWithOffset-(int)hourOfDawnWithOffset)*/) {
             isDuskPass = 0;
         }
-        if (localTime->tm_hour > hourOfDuskWithOffset && localTime->tm_min > 60*(hourOfDuskWithOffset-(int)hourOfDuskWithOffset)) {
+        if (localTime->tm_hour > hourOfDuskWithOffset /* && localTime->tm_min > 60*(hourOfDuskWithOffset-(int)hourOfDuskWithOffset)*/) {
             isDuskPass = 1;
         }
         if (localTime->tm_hour >= 23 && localTime->tm_min >= 59 && localTime->tm_sec >= 50) {
             now = time(NULL);
             /* wait 20 sec */
-            while(time(NULL)-now < 20000);
+            while(time(NULL)-now < 20);
             sun = compute_sunData();
             hourOfDawn = sun.dawn;
             hourOfDusk = sun.dusk;
-            printf("Dawn at : %f\r\n", hourOfDawnWithOffset);
-            printf("Dusk at : %f\r\n", hourOfDuskWithOffset);
+            printf("Dawn at : %f\r\n", hourOfDawn);
+            printf("Dusk at : %f\r\n", hourOfDusk);
+            printf("Dawn with offset at : %f\r\n", hourOfDawnWithOffset);
+            printf("Dusk with offset at : %f\r\n", hourOfDuskWithOffset);
         }
 
         /* Uncomment to read data from gpio */
@@ -197,7 +199,13 @@ int main() {
         // Set all remaining output with Binary Output Objects
         for (uint8_t i = 0; i < NUMBER_OF_BINARY_OUTPUT; i++) {
             gpio_write_output_value(i, BinaryOutput[i].value.binary);
+            BinaryLastValue[i] = BinaryOutput[i].value.binary;
         }
+
+        scheduleLastValue[0] = Schedule[0].value.binary;
+        scheduleLastValue[1] = Schedule[1].value.binary;
+        scheduleLastValue[2] = Schedule[2].value.binary;
+        scheduleLastValue[3] = Schedule[3].value.binary;
 
         /* for debugging purpose */
         printf("\r\n------ output value ------\r\n");
