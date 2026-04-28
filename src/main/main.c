@@ -13,19 +13,11 @@
 #include "gestion_gpio.h"
 #include "sun.h"
 
-#define LINE_INPUT_0 0
-#define LINE_INPUT_1 2
-#define LINE_INPUT_2 4
-
-#define LINE_OUTPUT_0 0
-#define LINE_OUTPUT_1 2
-#define LINE_OUTPUT_2 4
-
 #define INPUT_FIFO_PATH "appToServer"
 #define OUTPUT_FIFO_PATH "serverToApp"
 
-#define NUMBER_OF_BINARY_INPUT 3
-#define NUMBER_OF_BINARY_OUTPUT 3
+#define NUMBER_OF_BINARY_INPUT 8
+#define NUMBER_OF_BINARY_OUTPUT 8
 #define NUMBER_OF_ANALOG_OUTPUT 3
 #define NUMBER_OF_SCHEDULE 4
 
@@ -71,12 +63,9 @@ int main() {
     struct sunData sun = compute_sunData();
     double hourOfDawn = sun.dawn;
     double hourOfDusk = sun.dusk;
+    double hourOfDawnWithOffset = sun.dawn;
+    double hourOfDuskWithOffset = sun.dusk;
     bool isDuskPass = 0;
-
-    printf("Dawn at : %f\r\n", hourOfDawn);
-    printf("Dusk at : %f\r\n", hourOfDusk);
-
-    printf("Binary Object n°X will be linked to GPIO n°X\r\nAnalog Object are linked to nothing\r\nSchedule object are linked to nothing\r\n");
 
     int inputFd = -1;
     int outputFd = -1;
@@ -91,29 +80,13 @@ int main() {
     struct dataPacket BinaryOutput[NUMBER_OF_BINARY_OUTPUT], BinaryInput[NUMBER_OF_BINARY_INPUT],
                         AnalogOutput[NUMBER_OF_ANALOG_OUTPUT], Schedule[NUMBER_OF_SCHEDULE];
 
-    BinaryInput[0].typeOfObject = BINARY_INPUT;
-    BinaryInput[1].typeOfObject = BINARY_INPUT;
-    BinaryInput[2].typeOfObject = BINARY_INPUT;
-    BinaryInput[0].instanceOfObject = 0;
-    BinaryInput[1].instanceOfObject = 1;
-    BinaryInput[2].instanceOfObject = 2;
-    BinaryInput[0].value.binary = true;
-    BinaryInput[1].value.binary = true;
-    BinaryInput[2].value.binary = true;
+    for (uint8_t i = 0; i < NUMBER_OF_BINARY_INPUT; i++) {
+        BinaryInput[i].instanceOfObject = i;
+        BinaryInput[i].typeOfObject = BINARY_INPUT;
+    }
 
-
-    BinaryOutput[0].typeOfObject = BINARY_OUTPUT;
-    BinaryOutput[1].typeOfObject = BINARY_OUTPUT;
-    BinaryOutput[2].typeOfObject = BINARY_OUTPUT;
-
-    AnalogOutput[0].typeOfObject = ANALOG_OUTPUT;
-    AnalogOutput[1].typeOfObject = ANALOG_OUTPUT;
-    AnalogOutput[2].typeOfObject = ANALOG_OUTPUT;
-
-    Schedule[0].typeOfObject = SCHEDULE;
-    Schedule[1].typeOfObject = SCHEDULE;
-    Schedule[2].typeOfObject = SCHEDULE;
-    Schedule[3].typeOfObject = SCHEDULE;
+    bool scheduleAndNightLastValue[NUMBER_OF_SCHEDULE] = {0};
+    bool BinaryLastValue[NUMBER_OF_BINARY_OUTPUT] = {0};
 
     time_t now = 0;
     struct tm* localTime = NULL;
@@ -124,26 +97,6 @@ int main() {
         now = time(NULL);
         localTime = localtime(&now);
 
-        /* is Dawn pass? or Dusk? */
-        if (localTime->tm_hour > hourOfDawn && localTime->tm_min > 60*(hourOfDawn-(int)hourOfDawn)) {
-            isDuskPass = 0;
-        }
-        if (localTime->tm_hour > hourOfDusk && localTime->tm_min > 60*(hourOfDusk-(int)hourOfDusk)) {
-            isDuskPass = 1;
-        }
-        if (localTime->tm_hour >= 23 && localTime->tm_min >= 59 && localTime->tm_sec >= 50) {
-            now = time(NULL);
-            /* wait 20 sec */
-            while(time(NULL)-now < 20000);
-            sun = compute_sunData();
-            hourOfDawn = sun.dawn;
-            hourOfDusk = sun.dusk;
-            printf("Dawn at : %f\r\n", hourOfDawn);
-            printf("Dusk at : %f\r\n", hourOfDusk);
-        }
-
-
-        printf("\r\n------ Received new data from the server ------\r\n");
         /* get newData for output object */
         readNewData(NUMBER_OF_OUTPUT, newDataOutput, outputFd);
 
@@ -182,36 +135,75 @@ int main() {
             }
         }
 
+        hourOfDawnWithOffset = hourOfDawn + AnalogOutput[0].value.analog;
+        hourOfDuskWithOffset = hourOfDusk + AnalogOutput[1].value.analog;
+
+        /* is Dawn pass? or Dusk? */
+        if (localTime->tm_hour > hourOfDawnWithOffset /* && localTime->tm_min > 60*(hourOfDawnWithOffset-(int)hourOfDawnWithOffset)*/) {
+            isDuskPass = 0;
+        }
+        if (localTime->tm_hour > hourOfDuskWithOffset /* && localTime->tm_min > 60*(hourOfDuskWithOffset-(int)hourOfDuskWithOffset)*/) {
+            isDuskPass = 1;
+        }
+        if (localTime->tm_hour >= 23 && localTime->tm_min >= 59 && localTime->tm_sec >= 50) {
+            now = time(NULL);
+            /* wait 20 sec */
+            while(time(NULL)-now < 20);
+            sun = compute_sunData();
+            hourOfDawn = sun.dawn;
+            hourOfDusk = sun.dusk;
+            printf("Dawn at : %f\r\n", hourOfDawn);
+            printf("Dusk at : %f\r\n", hourOfDusk);
+            printf("Dawn with offset at : %f\r\n", hourOfDawnWithOffset);
+            printf("Dusk with offset at : %f\r\n", hourOfDuskWithOffset);
+        }
 
         /* Uncomment to read data from gpio */
 
-        BinaryInput[0].value.binary = gpio_read_input_value(LINE_INPUT_0);
-        BinaryInput[1].value.binary = gpio_read_input_value(LINE_INPUT_1);
-        BinaryInput[2].value.binary = gpio_read_input_value(LINE_INPUT_2);
-
+        for (uint8_t i = 0; i < NUMBER_OF_BINARY_INPUT; i++) {
+            BinaryInput[i].value.binary = gpio_read_input_value(i);
+        }
 
         // for testing purpose
         // BinaryInput[0].value.binary ^= 1;
         // BinaryInput[1].value.binary ^= 1;
         // BinaryInput[2].value.binary ^= 1;
 
-        /* Uncomment to manipulate GPIO */
-
-        /* Schedule[N]->PresentValue => BinaryOutput[N]->PresentValue */
         /* output set only if Dawn not passed -> it's Dusk -> lamp can be set on*/
 
-        if (Schedule[0].tagOfObject == BOOLEAN) {
-            gpio_write_output_value(LINE_OUTPUT_0, BinaryOutput[0].value.binary | (Schedule[0].value.binary & isDuskPass));
-        } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        if (BinaryLastValue[0] != BinaryOutput[0].value.binary) {
+            gpio_write_output_value(0, BinaryOutput[0].value.binary);
+        } else if (scheduleAndNightLastValue[0] != ( Schedule[0].value.binary & isDuskPass)) {
+            gpio_write_output_value(0, (Schedule[0].value.binary & isDuskPass));
+        }
 
-        if (Schedule[1].tagOfObject == BOOLEAN) {
-            gpio_write_output_value(LINE_OUTPUT_1, BinaryOutput[1].value.binary | (Schedule[1].value.binary & isDuskPass));
-        } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        if (BinaryLastValue[1] != BinaryOutput[1].value.binary) {
+            gpio_write_output_value(1, BinaryOutput[1].value.binary);
+        } else if (scheduleAndNightLastValue[1] != ( Schedule[1].value.binary & isDuskPass)) {
+            gpio_write_output_value(1, (Schedule[1].value.binary & isDuskPass));
+        }
 
-        if (Schedule[2].tagOfObject == BOOLEAN) {
-            gpio_write_output_value(LINE_OUTPUT_2, BinaryOutput[2].value.binary | (Schedule[2].value.binary & isDuskPass));
-        } else printf("Error : A output value cannot be set with a Schedule of different tag\r\n");
+        if (BinaryLastValue[2] != BinaryOutput[2].value.binary) {
+            gpio_write_output_value(2, BinaryOutput[2].value.binary);
+        } else if (scheduleAndNightLastValue[2] != ( Schedule[2].value.binary & isDuskPass)) {
+            gpio_write_output_value(2, (Schedule[2].value.binary & isDuskPass));
+        }
 
+        BinaryLastValue[0] = BinaryOutput[0].value.binary;
+        BinaryLastValue[1] = BinaryOutput[1].value.binary;
+        BinaryLastValue[2] = BinaryOutput[2].value.binary;
+        // Set all remaining output with Binary Output Objects
+        for (uint8_t i = 3; i < NUMBER_OF_BINARY_OUTPUT; i++) {
+            gpio_write_output_value(i, BinaryOutput[i].value.binary);
+            BinaryLastValue[i] = BinaryOutput[i].value.binary;
+        }
+
+        scheduleAndNightLastValue[0] = ( Schedule[0].value.binary & isDuskPass);
+        scheduleAndNightLastValue[1] = ( Schedule[1].value.binary & isDuskPass);
+        scheduleAndNightLastValue[2] = ( Schedule[2].value.binary & isDuskPass);
+        scheduleAndNightLastValue[3] = ( Schedule[3].value.binary & isDuskPass);
+
+        /* for debugging purpose */
         printf("\r\n------ output value ------\r\n");
         printf("Binary Output Object %d -> %d\r\n", BinaryOutput[0].instanceOfObject, BinaryOutput[0].value.binary);
         printf("Binary Output Object %d -> %d\r\n", BinaryOutput[1].instanceOfObject, BinaryOutput[1].value.binary);
@@ -232,8 +224,8 @@ int main() {
         printf("Binary Input Object %d -> %d\r\n", BinaryInput[2].instanceOfObject, BinaryInput[2].value.binary);
 
         printf("\r\n------  is Dusk passed ?  -------\r\n");
-        printf("Dawn at : %f\r\n", hourOfDawn);
-        printf("Dusk at : %f\r\n", hourOfDusk);
+        printf("Dawn at : %f\r\n", hourOfDawnWithOffset);
+        printf("Dusk at : %f\r\n", hourOfDuskWithOffset);
         if (isDuskPass) printf("Yes !\r\n");
         else printf("No !\r\n");
 
